@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Learning App{% endblock %}
+
+{% block content %}
+<div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem;">
+    <h1>Hello, <span style="color: var(--primary-color);">{{ userData.name }}</span></h1>
+    <p style="color: var(--text-muted);">{{ userData.email }} | Developer Profile</p>
+</div>
+
+<div class="dashboard-grid">
+    <!-- Stock Widgets -->
+    <div id="stock-container" style="display: contents;">
+        <!-- Progress Bar -->
+        <div class="progress-container">
+            <div id="refresh-bar" class="progress-bar"></div>
+        </div>
+
+        {% for stock in stocks %}
+        <div class="glass-panel stat-card">
+            <div class="stat-title">{{ stock.name }}</div>
+            <div class="stat-value" style="font-size: 1.5rem;">{{ stock.price }}</div>
+            <div style="font-size: 0.9rem; margin-top: 0.5rem; color: {{ '#10b981' if stock.is_up else '#ef4444' }};">
+                {{ '▲' if stock.is_up else '▼' }} {{ stock.change }} ({{ stock.pct }})
+            </div>
+            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem; text-align: right;">
+                {{ stock.last_updated }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="glass-panel stat-card">
+        <div class="stat-title">System CPU</div>
+        <div class="stat-value">{{ cpu }}%</div>
+    </div>
+
+    <div class="glass-panel stat-card">
+        <div class="stat-title">System RAM</div>
+        <div class="stat-value">{{ ram }}%</div>
+    </div>
+
+    <div class="glass-panel stat-card">
+        <div class="stat-title">ML Prediction</div>
+        <div class="stat-value">{{ mlResult }}%</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Based on {{ studyHours }} study
+            hours</div>
+    </div>
+
+    <div class="glass-panel stat-card">
+        <div class="stat-title">Gallery Items</div>
+        <div class="stat-value">{{ galleryCount }}</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Total Uploaded Images</div>
+    </div>
+
+    <!-- Skills Card -->
+    <div class="glass-panel stat-card">
+        <div class="stat-title">Skills</div>
+        <ul style="margin-top: 1rem; padding-left: 1.5rem;">
+            {% for skill in user.skills %}
+            <li style="color: var(--text-color);">{{ skill }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<div class="text-center mt-4">
+    <a href="{{ url_for('logout') }}" style="color: var(--text-muted); font-size: 0.9rem;">Sign out of session</a>
+</div>
+
+<script>
+    let progressInterval;
+    const REFRESH_TIME = 500000;
+
+    function startProgress() {
+        const bar = document.getElementById('refresh-bar');
+        if (!bar) return;
+
+        let startTime = Date.now();
+
+        if (progressInterval) clearInterval(progressInterval);
+
+        progressInterval = setInterval(() => {
+            let elapsed = Date.now() - startTime;
+            let pct = (elapsed / REFRESH_TIME) * 100;
+
+            if (pct >= 100) {
+                pct = 100;
+                clearInterval(progressInterval);
+            }
+
+            bar.style.width = pct + '%';
+        }, 100);
+    }
+
+    function updateStocks() {
+        const container = document.getElementById('stock-container');
+        // Add updating class to stock cards only, not the progress bar container
+        const cards = container.querySelectorAll('.stat-card');
+        cards.forEach(card => card.classList.add('updating'));
+
+        fetch('/api/stocks')
+            .then(response => response.json())
+            .then(data => {
+                // Rebuild HTML but keep progress bar structure
+                let html = `
+                    <div class="progress-container">
+                        <div id="refresh-bar" class="progress-bar" style="width: 0%"></div>
+                    </div>
+                `;
+
+                data.forEach(stock => {
+                    const arrow = stock.is_up ? '▲' : '▼';
+                    const color = stock.is_up ? '#10b981' : '#ef4444';
+
+                    const card = `
+                        <div class="glass-panel stat-card">
+                            <div class="stat-title">${stock.name}</div>
+                            <div class="stat-value" style="font-size: 1.5rem;">${stock.price}</div>
+                            <div style="font-size: 0.9rem; margin-top: 0.5rem; color: ${color};">
+                                ${arrow} ${stock.change} (${stock.pct})
+                            </div>
+                            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem; text-align: right;">
+                                ${stock.last_updated}
+                            </div>
+                        </div>
+                    `;
+                    html += card;
+                });
+
+                container.innerHTML = html;
+
+                // Restart progress animation
+                startProgress();
+            })
+            .catch(error => {
+                console.error('Error fetching stock data:', error);
+                cards.forEach(card => card.classList.remove('updating'));
+                // Retry progress
+                startProgress();
+            });
+    }
+
+    // Initial start
+    startProgress();
+    // Refresh loop using setInterval matching the progress timing
+    setInterval(updateStocks, REFRESH_TIME);
+</script>
+{% endblock %}

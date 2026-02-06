@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+
+{% block title %}Gallery - Learning App{% endblock %}
+
+{% block content %}
+<div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="margin: 0;">Image Gallery</h2>
+        <span style="color: var(--text-muted); font-size: 0.9rem;">Drag & drop images to extract text</span>
+    </div>
+
+    <!-- Loader -->
+    <div id="loader" class="loader-overlay">
+        <div class="spinner"></div>
+        <div class="loader-text">Refreshing Gallery...</div>
+    </div>
+
+    <!-- Drag & Drop Zone -->
+    <div id="drop-zone" class="upload-area gallery-upload">
+        <div class="upload-controls" style="margin-bottom: 1rem; z-index: 10; position: relative;">
+            <select id="category-select" class="category-select" onclick="event.stopPropagation()">
+                {% for cat in categories %}
+                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="upload-icon">📁</div>
+        <p class="upload-text">Drag & Drop images here or <span class="highlight">browse</span></p>
+        <input type="file" id="gallery-upload-input" multiple accept="image/*" style="display: none;">
+    </div>
+
+    <!-- Upload Status -->
+    <div id="upload-status" class="status-container"></div>
+</div>
+
+<div class="dashboard-grid gallery-grid" id="gallery-grid">
+    {% for item in gallery_items %}
+    <div class="glass-panel gallery-item">
+        <div class="gallery-image-wrapper">
+            <img src="{{ url_for('uploaded_file', filename=item.filename) }}" alt="Uploaded Image" loading="lazy">
+            <div class="gallery-overlay">
+                <button class="view-btn icon-btn" onclick='showDetails({{ item | tojson }})'>
+                    <span>👁️</span> View
+                </button>
+                <button class="delete-btn icon-btn" onclick='deleteItem({{ item.id }}, event)'
+                    style="background: rgba(239, 68, 68, 0.9); margin-left: 8px;">
+                    <span>🗑️</span> Delete
+                </button>
+            </div>
+        </div>
+        <div class="gallery-content">
+            <div class="gallery-date">{{ item.timestamp }}</div>
+            {% if item.category_id == 2 %}
+            <div class="category-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Hair Style</div>
+            {% else %}
+            <div class="category-badge">General</div>
+            {% endif %}
+            <div class="gallery-text-preview">{{ item.text[:100] }}{% if item.text|length > 100 %}...{% endif %}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal -->
+<div id="details-modal" class="modal">
+    <div class="modal-backdrop"></div>
+    <div class="glass-panel modal-content">
+        <div class="modal-header">
+            <h3>Image Details</h3>
+            <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-image-col">
+                <img id="modal-image" src="" alt="Full view">
+            </div>
+            <div class="modal-text-col">
+                <div class="document-viewer" style="margin-top: 0; height: 100%;">
+                    <div class="document-header">
+                        <div class="document-title"><span>📄</span> Extracted Text</div>
+                        <button class="copy-btn" onclick="copyModalText()"><span>📋</span> Copy</button>
+                    </div>
+                    <div class="document-body">
+                        <textarea id="modal-text" class="document-content" readonly></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Variant Selection Modal -->
+<div id="variant-modal" class="modal">
+    <div class="modal-backdrop"></div>
+    <div class="glass-panel modal-content" style="max-width: 900px;">
+        <div class="modal-header">
+            <h3>Select a Style</h3>
+            <div style="font-size: 0.9rem; color: var(--text-muted); margin-left: auto; margin-right: 1rem;"
+                id="gender-info"></div>
+            <button class="close-variant-modal" onclick="hideVariantModal()">&times;</button>
+        </div>
+        <div class="modal-body" style="display: block; overflow-y: auto;">
+            <p>We analyzed your face. Select a style to save to the gallery:</p>
+            <div class="variant-grid" id="variant-grid">
+                <!-- Variants injected here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('gallery-upload-input');
+    const categorySelect = document.getElementById('category-select');
+    const uploadStatus = document.getElementById('upload-status');
+    const galleryGrid = document.getElementById('gallery-grid');
+    const modal = document.getElementById('details-modal');
+    const variantModal = document.getElementById('variant-modal');
+    const closeModal = document.querySelector('.close-modal');
+    const backdrop = document.querySelector('.modal-backdrop');
+
+    // Drag & Drop Handlers
+    dropZone.addEventListener('click', (e) => {
+        if (e.target !== categorySelect) fileInput.click();
+    });
+
+    fileInput.addEventListener('change', handleFiles);
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        handleUpload(e.dataTransfer.files);
+    });
+
+    function handleFiles(e) {
+        handleUpload(e.target.files);
+    }
+
+    let activeUploads = 0;
+
+    function handleUpload(files) {
+        if (files.length === 0) return;
+
+        Array.from(files).forEach(file => {
+            if (!file.type.startsWith('image/')) return;
+            uploadFile(file);
+        });
+
+        // Reset file input to allow selecting the same file again
+        fileInput.value = '';
+    }
+
+    function uploadFile(file) {
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('category_id', categorySelect.value);
+
+        // Increment active uploads and show loader
+        activeUploads++;
+        updateLoader();
+
+        // Create status item with progress bar
+        const statusItem = document.createElement('div');
+        statusItem.className = 'status-item';
+        statusItem.style.marginBottom = '10px';
+        statusItem.innerHTML = `
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <span>Uploading ${file.name}...</span>
+                <span class="progress-text">0%</span>
+            </div>
+            <div style="background:#eee; height:5px; width:100%; border-radius:3px; overflow:hidden;">
+                <div class="progress-fill" style="background:#4299e1; height:100%; width:0%; transition: width 0.2s;"></div>
+            </div>
+        `;
+        uploadStatus.appendChild(statusItem);
+
+        const progressBar = statusItem.querySelector('.progress-fill');
+        const progressText = statusItem.querySelector('.progress-text');
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '{{ url_for("upload") }}', true);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+        // Track upload progress
+        xhr.upload.onprogress = function (e) {
+            if (e.lengthComputable) {
+                const percentComplete = Math.round((e.loaded / e.total) * 100);
+                progressBar.style.width = percentComplete + '%';
+                progressText.textContent = percentComplete + '%';
+
+                if (percentComplete === 100) {
+                    statusItem.querySelector('span').textContent = `Processing ${file.name}... (This may take a moment)`;
+                }
+            }
+        };
+
+        xhr.onload = function () {
+            activeUploads--;
+            updateLoader();
+
+            if (xhr.status === 200) {
+                try {
+                    const data = JSON.parse(xhr.responseText);
+                    if (data.success) {
+                        statusItem.remove();
+                        if (data.type === 'selection_required') {
+                            showVariantModal(data.variants, data.gender, data.original_filename);
+                        } else {
+                            prependGalleryItem(data.entry);
+                        }
+                    } else {
+                        throw new Error(data.error || 'Unknown error');
+                    }
+                } catch (e) {
+                    handleError(e.message);
+                }
+            } else {
+                handleError(`Server Error: ${xhr.status}`);
+            }
+        };
+
+        xhr.onerror = function () {
+            activeUploads--;
+            updateLoader();
+            handleError("Network Error");
+        };
+
+        function handleError(msg) {
+            statusItem.innerHTML = `<span style="color: #ef4444">✗ Error: ${msg}</span>`;
+            setTimeout(() => statusItem.remove(), 5000);
+        }
+
+        xhr.send(formData);
+    }
+
+    function showVariantModal(variants, gender, originalFilename) {
+        const grid = document.getElementById('variant-grid');
+        document.getElementById('gender-info').textContent = `Detected: ${gender}`;
+        grid.innerHTML = '';
+
+        variants.forEach(variant => {
+            const card = document.createElement('div');
+            card.className = 'variant-card';
+            card.innerHTML = `
+                <img src="${variant.src}" alt="${variant.style}">
+                <div class="variant-info">${variant.style}</div>
+            `;
+            card.onclick = () => saveVariant(originalFilename, variant.style, variant.filename);
+            grid.appendChild(card);
+        });
+
+        variantModal.classList.add('active');
+    }
+
+    function hideVariantModal() {
+        variantModal.classList.remove('active');
+    }
+
+    function saveVariant(originalFilename, styleName, variantFilename) {
+        hideVariantModal();
+        activeUploads++;
+        updateLoader();
+
+        fetch('{{ url_for("save_variant") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                filename: variantFilename,
+                original_filename: originalFilename,
+                style_name: styleName,
+                category_id: 2
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    prependGalleryItem(data.entry);
+                } else {
+                    alert('Error saving variant');
+                }
+            })
+            .finally(() => {
+                activeUploads--;
+                updateLoader();
+            });
+    }
+
+    function updateLoader() {
+        const loader = document.getElementById('loader');
+        const loaderText = loader.querySelector('.loader-text');
+
+        if (activeUploads > 0) {
+            loader.classList.add('active');
+            loaderText.textContent = `Processing ${activeUploads} task(s)...`;
+        } else {
+            loader.classList.remove('active');
+            loaderText.textContent = 'Refreshing Gallery...'; // Reset text
+        }
+    }
+
+    window.deleteItem = function (itemId, event) {
+        event.stopPropagation();
+
+        if (!confirm('Are you sure you want to delete this image?')) {
+            return;
+        }
+
+        activeUploads++;
+        updateLoader();
+
+        fetch(`/delete/${itemId}`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove the item from DOM
+                    const items = document.querySelectorAll('.gallery-item');
+                    items.forEach(item => {
+                        const viewBtn = item.querySelector('.view-btn');
+                        if (viewBtn && viewBtn.getAttribute('onclick').includes(`"id":${itemId}`)) {
+                            item.remove();
+                        }
+                    });
+                } else {
+                    alert('Error deleting item: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Error deleting item: ' + err.message);
+            })
+            .finally(() => {
+                activeUploads--;
+                updateLoader();
+            });
+    }
+
+    function prependGalleryItem(entry) {
+        const isHairStyle = entry.category_id == 2;
+        const badge = isHairStyle
+            ? '<div class="category-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Hair Style</div>'
+            : '<div class="category-badge">General</div>';
+
+        const itemHtml = `
+        <div class="glass-panel gallery-item new-item">
+            <div class="gallery-image-wrapper">
+                <img src="/uploads/${entry.filename}" alt="Uploaded Image" loading="lazy">
+                <div class="gallery-overlay">
+                    <button class="view-btn icon-btn" onclick='showDetails(${JSON.stringify(entry)})'>
+                        <span>👁️</span> View
+                    </button>
+                    <button class="delete-btn icon-btn" onclick='deleteItem(${entry.id}, event)' style="background: rgba(239, 68, 68, 0.9); margin-left: 8px;">
+                        <span>🗑️</span> Delete
+                    </button>
+                </div>
+            </div>
+            <div class="gallery-content">
+                <div class="gallery-date">${entry.timestamp}</div>
+                ${badge}
+                <div class="gallery-text-preview">${entry.text.substring(0, 100)}${entry.text.length > 100 ? '...' : ''}</div>
+            </div>
+        </div>
+        `;
+        galleryGrid.insertAdjacentHTML('afterbegin', itemHtml);
+    }
+
+    // Modal Functions
+    window.showDetails = function (item) {
+        document.getElementById('modal-image').src = `/uploads/${item.filename}`;
+        document.getElementById('modal-text').value = item.text;
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function hideModal() {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    closeModal.addEventListener('click', hideModal);
+    backdrop.addEventListener('click', hideModal);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('active')) hideModal();
+    });
+
+    window.copyModalText = function () {
+        const copyText = document.getElementById("modal-text");
+        copyText.select();
+        navigator.clipboard.writeText(copyText.value);
+
+        const btn = document.querySelector('.modal-content .copy-btn');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span>✓</span> Copied!';
+        setTimeout(() => btn.innerHTML = originalHtml, 2000);
+    }
+</script>
+{% endblock %}

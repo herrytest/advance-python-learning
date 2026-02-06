@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Edit User - Learning App{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 2rem auto; padding: 0 1rem;">
+    <div class="glass-panel" style="padding: 2rem;">
+        <h2 style="margin-bottom: 2rem; font-size: 1.8rem;">✏️ Edit User (FastAPI)</h2>
+
+        <!-- Message Display -->
+        <div id="messageBox" style="display: none; padding: 1rem; margin-bottom: 1rem; border-radius: 8px;"></div>
+
+        <form id="editUserForm" onsubmit="updateUser(event)">
+            <div class="form-group">
+                <label for="name" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Name</label>
+                <input type="text" id="name" name="name" placeholder="Enter name" required
+                    style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white;" />
+            </div>
+
+            <div class="form-group">
+                <label for="email" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Email</label>
+                <input type="email" id="email" name="email" placeholder="Enter email" required
+                    style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white;" />
+            </div>
+
+            <div class="form-group">
+                <label for="password" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Password</label>
+                <input type="text" id="password" name="password" placeholder="Enter password" required
+                    style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white;" />
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="submit"
+                    style="flex: 1; padding: 0.75rem; background: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    💾 Update User
+                </button>
+                <a href="{{ url_for('users') }}"
+                    style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 0.75rem; background: rgba(107, 114, 128, 0.9); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                    ❌ Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const API_BASE_URL = 'http://127.0.0.1:8000/api/users';
+    const userId = {{ user_id }};
+
+    // Load user data on page load
+    document.addEventListener('DOMContentLoaded', loadUser);
+
+    function showMessage(message, isSuccess = true) {
+        const messageBox = document.getElementById('messageBox');
+        messageBox.textContent = message;
+        messageBox.style.display = 'block';
+        messageBox.style.borderLeft = `4px solid ${isSuccess ? '#10b981' : '#ef4444'}`;
+        messageBox.style.background = isSuccess ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+        messageBox.style.color = isSuccess ? '#10b981' : '#ef4444';
+    }
+
+    async function loadUser() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/${userId}`);
+            const user = await response.json();
+
+            if (response.ok) {
+                document.getElementById('name').value = user.name;
+                document.getElementById('email').value = user.email;
+                document.getElementById('password').value = user.password;
+            } else {
+                showMessage('❌ Error loading user', false);
+            }
+        } catch (error) {
+            console.error('Error loading user:', error);
+            showMessage('❌ Error loading user. Make sure FastAPI server is running.', false);
+        }
+    }
+
+    async function updateUser(event) {
+        event.preventDefault();
+
+        const formData = new FormData(event.target);
+        const userData = {
+            name: formData.get('name'),
+            email: formData.get('email'),
+            password: formData.get('password')
+        };
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(userData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showMessage('✅ User updated successfully!', true);
+                setTimeout(() => {
+                    window.location.href = '{{ url_for("users") }}';
+                }, 1500);
+            } else {
+                showMessage(`❌ ${data.detail || 'Error updating user'}`, false);
+            }
+        } catch (error) {
+            console.error('Error updating user:', error);
+            showMessage('❌ Error updating user. Make sure FastAPI server is running.', false);
+        }
+    }
+</script>
+{% endblock %}

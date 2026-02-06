@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+lib/
+include/
+share/
+lib64/
+bin/
+pyvenv.cfg
+
+# Flask
+instance/
+.webassets-cache
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads and temporary files
+uploads/*
+!uploads/.gitkeep
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.local
+
+# Model files (if large)
+*.h5
+*.pkl
+*.pth
+
+# Gemini artifacts
+.gemini/

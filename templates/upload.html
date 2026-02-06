@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}OCR Upload - Learning App{% endblock %}
+
+{% block content %}
+<div class="glass-panel" style="padding: 2rem;">
+    <h2 class="mb-4">EXTRACT TEXT FROM IMAGE</h2>
+
+    <div class="upload-area">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <input type="file" name="image" id="file-upload" required onchange="handleFileSelect(this)">
+            </div>
+            <!-- Button removed for auto-upload -->
+        </form>
+    </div>
+
+    <!-- Loader -->
+    <div id="loader" class="loader-overlay">
+        <div class="spinner"></div>
+        <div class="loader-text">Processing Image...</div>
+    </div>
+
+    {% if text %}
+    <div class="document-viewer">
+        <div class="document-header">
+            <div class="document-title">
+                <span>📄</span> Extracted Text Content
+            </div>
+            <button class="copy-btn" onclick="copyText()">
+                <span>📋</span> Copy Text
+            </button>
+        </div>
+        <div class="document-body">
+            <textarea id="extractedText" class="document-content" readonly>{{ text }}</textarea>
+        </div>
+    </div>
+
+    <script>
+        function copyText() {
+            var copyText = document.getElementById("extractedText");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(copyText.value).then(function () {
+                var btn = document.querySelector('.copy-btn');
+                var originalHtml = btn.innerHTML;
+                btn.innerHTML = '<span>✓</span> Copied!';
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                }, 2000);
+            });
+        }
+    </script>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{{ url_for('dashboard') }}" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+            &larr; Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<script>
+    const form = document.querySelector('form');
+    const loader = document.getElementById('loader');
+    const fileInput = document.getElementById('file-upload');
+    const dropArea = document.querySelector('.upload-area'); // Assuming .upload-area is your drop target
+
+    if (dropArea) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropArea.classList.add('highlight');
+        }
+
+        function unhighlight(e) {
+            dropArea.classList.remove('highlight');
+        }
+
+        dropArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            fileInput.files = files;
+            handleFileSelect(fileInput);
+        }
+    }
+
+    function handleFileSelect(input) {
+        if (input.files && input.files[0]) {
+            showLoader();
+            // Submit the form automatically
+            const formData = new FormData(form);
+            fetch('{{ url_for("upload") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = "{{ url_for('gallery') }}";
+                    } else {
+                        alert('Upload failed: ' + (data.error || 'Unknown error'));
+                        hideLoader();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred during upload.');
+                    hideLoader();
+                });
+        }
+    }
+
+    function showLoader() {
+        if (loader) loader.classList.add('active');
+    }
+
+    function hideLoader() {
+        if (loader) loader.classList.remove('active');
+    }
+</script>
+{% endblock %}

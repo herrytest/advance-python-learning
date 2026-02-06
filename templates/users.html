@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}Users - Learning App{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 2rem auto; padding: 0 1rem;">
+    <div class="glass-panel" style="padding: 2rem;">
+        <h2 style="margin-bottom: 2rem; font-size: 1.8rem;">👥 User Management (FastAPI)</h2>
+
+        <!-- Create User Form -->
+        <div style="background: rgba(255, 255, 255, 0.03); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+            <h3 style="margin-bottom: 1.5rem; font-size: 1.2rem; color: var(--primary-color);">Create New User</h3>
+            <form id="createUserForm" onsubmit="createUser(event)">
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group" style="margin: 0;">
+                        <label for="name"
+                            style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted);">Name</label>
+                        <input type="text" id="name" name="name" placeholder="Enter name" required
+                            style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white;" />
+                    </div>
+
+                    <div class="form-group" style="margin: 0;">
+                        <label for="email"
+                            style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted);">Email</label>
+                        <input type="email" id="email" name="email" placeholder="Enter email" required
+                            style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white;" />
+                    </div>
+
+                    <div class="form-group" style="margin: 0;">
+                        <label for="password"
+                            style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted);">Password</label>
+                        <input type="text" id="password" name="password" placeholder="Enter password" required
+                            style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white;" />
+                    </div>
+
+                    <div style="display: flex; align-items: flex-end;">
+                        <button type="submit"
+                            style="width: 100%; padding: 0.75rem; background: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                            ➕ Create User
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Message Display -->
+        <div id="messageBox" style="display: none; padding: 1rem; margin-bottom: 2rem; border-radius: 8px;"></div>
+
+        <!-- Users List -->
+        <div>
+            <h3 style="margin-bottom: 1.5rem; font-size: 1.2rem;">All Users <span id="userCount">(0)</span></h3>
+
+            <div id="usersTableContainer"
+                style="overflow-x: auto; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: rgba(255, 255, 255, 0.05);">
+                            <th
+                                style="padding: 1rem; text-align: left; font-weight: 600; border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
+                                ID</th>
+                            <th
+                                style="padding: 1rem; text-align: left; font-weight: 600; border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
+                                Name</th>
+                            <th
+                                style="padding: 1rem; text-align: left; font-weight: 600; border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
+                                Email</th>
+                            <th
+                                style="padding: 1rem; text-align: left; font-weight: 600; border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
+                                Created At</th>
+                            <th
+                                style="padding: 1rem; text-align: center; font-weight: 600; border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
+                                Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- Users will be loaded here dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="emptyState"
+                style="display: none; text-align: center; padding: 3rem; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 2px dashed rgba(255, 255, 255, 0.1);">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">👤</div>
+                <p style="color: var(--text-muted); font-size: 1.1rem;">No users found</p>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Create your first user
+                    above!</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE_URL = 'http://127.0.0.1:8000/api/users';
+
+    // Load users on page load
+    document.addEventListener('DOMContentLoaded', loadUsers);
+
+    function showMessage(message, isSuccess = true) {
+        const messageBox = document.getElementById('messageBox');
+        messageBox.textContent = message;
+        messageBox.style.display = 'block';
+        messageBox.style.borderLeft = `4px solid ${isSuccess ? '#10b981' : '#ef4444'}`;
+        messageBox.style.background = isSuccess ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+        messageBox.style.color = isSuccess ? '#10b981' : '#ef4444';
+
+        setTimeout(() => {
+            messageBox.style.display = 'none';
+        }, 5000);
+    }
+
+    async function loadUsers() {
+        try {
+            const response = await fetch(API_BASE_URL);
+            const users = await response.json();
+
+            const tbody = document.getElementById('usersTableBody');
+            const emptyState = document.getElementById('emptyState');
+            const tableContainer = document.getElementById('usersTableContainer');
+            const userCount = document.getElementById('userCount');
+
+            userCount.textContent = `(${users.length})`;
+
+            if (users.length === 0) {
+                tableContainer.style.display = 'none';
+                emptyState.style.display = 'block';
+            } else {
+                tableContainer.style.display = 'block';
+                emptyState.style.display = 'none';
+
+                tbody.innerHTML = users.map(user => `
+                    <tr id="user-${user.id}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s;">
+                        <td style="padding: 1rem;">${user.id}</td>
+                        <td style="padding: 1rem; font-weight: 500;">${user.name}</td>
+                        <td style="padding: 1rem; color: var(--text-muted);">${user.email}</td>
+                        <td style="padding: 1rem; color: var(--text-muted); font-size: 0.9rem;">${new Date(user.created_at).toLocaleString()}</td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                                <button onclick="editUser(${user.id})"
+                                    style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.5rem 1rem; background: rgba(59, 130, 246, 0.9); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: background 0.2s;">
+                                    ✏️ Edit
+                                </button>
+                                <button onclick="deleteUser(${user.id})"
+                                    style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.5rem 1rem; background: rgba(239, 68, 68, 0.9); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: background 0.2s;">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        } catch (error) {
+            console.error('Error loading users:', error);
+            showMessage('Error loading users. Make sure FastAPI server is running on port 8000.', false);
+        }
+    }
+
+    async function createUser(event) {
+        event.preventDefault();
+
+        const formData = new FormData(event.target);
+        const userData = {
+            name: formData.get('name'),
+            email: formData.get('email'),
+            password: formData.get('password')
+        };
+
+        try {
+            const response = await fetch(API_BASE_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(userData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showMessage('✅ User created successfully!', true);
+                event.target.reset();
+                loadUsers();
+            } else {
+                showMessage(`❌ ${data.detail || 'Error creating user'}`, false);
+            }
+        } catch (error) {
+            console.error('Error creating user:', error);
+            showMessage('❌ Error creating user. Make sure FastAPI server is running.', false);
+        }
+    }
+
+    function editUser(userId) {
+        window.location.href = `/edit_user/${userId}`;
+    }
+
+    async function deleteUser(userId) {
+        if (!confirm('Are you sure you want to delete this user?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/${userId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                const row = document.getElementById(`user-${userId}`);
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(-20px)';
+                setTimeout(() => {
+                    row.remove();
+                    loadUsers();
+                }, 300);
+                showMessage('✅ User deleted successfully!', true);
+            } else {
+                showMessage(`❌ ${data.detail || 'Error deleting user'}`, false);
+            }
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            showMessage('❌ Error deleting user. Make sure FastAPI server is running.', false);
+        }
+    }
+</script>
+
+<style>
+    tr:hover {
+        background: rgba(255, 255, 255, 0.03) !important;
+    }
+
+    button:hover,
+    a:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}
