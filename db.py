@@ -125,8 +125,16 @@ def delete_gallery_item(item_id):
 
 # ===== USER FUNCTIONS =====
 
-def create_user(name, email, password,created_at,updated_at):
+def create_user(name, email, password, created_at=None, updated_at=None):
     """Create a new user"""
+    from datetime import datetime
+    
+    # Set default timestamps if not provided
+    if created_at is None:
+        created_at = datetime.now()
+    if updated_at is None:
+        updated_at = datetime.now()
+    
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -161,8 +169,14 @@ def get_user_by_id(user_id):
     conn.close()
     return user
 
-def update_user(user_id, name, email, password, updated_at):
+def update_user(user_id, name, email, password, updated_at=None):
     """Update user information"""
+    from datetime import datetime
+    
+    # Set default timestamp if not provided
+    if updated_at is None:
+        updated_at = datetime.now()
+    
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
