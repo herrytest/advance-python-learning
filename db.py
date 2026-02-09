@@ -1,6 +1,22 @@
-import mysql.connector
+"""
+Database operations using Django ORM.
+This module replaces raw MySQL operations with Django's ORM.
+"""
 
-# Database Configuration
+# Initialize Django before importing models
+import os
+import django
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_settings')
+django.setup()
+
+from models import Gallery, Category, User, Role
+from django.utils import timezone
+from datetime import datetime
+from django.db import IntegrityError
+
+
+# Database Configuration (kept for reference, now in django_settings.py)
 DB_CONFIG = {
     'user': 'laravel',
     'password': 'password',
@@ -9,205 +25,234 @@ DB_CONFIG = {
     'raise_on_warnings': False
 }
 
-def get_db_connection():
-    """Get database connection"""
-    return mysql.connector.connect(**DB_CONFIG)
 
 def init_db():
-    """Initialize database tables"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Gallery table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS gallery (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            filename VARCHAR(255) NOT NULL,
-            text TEXT,
-            timestamp DATETIME NOT NULL
-        )
-    ''')
-    
-    # Categories table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS categories (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(50) NOT NULL UNIQUE
-        )
-    ''')
-    
-    # Users table - check if it already exists (might be Laravel table)
-    cursor.execute("SHOW TABLES LIKE 'users'")
-    if not cursor.fetchone():
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(100) NOT NULL UNIQUE,
-                email VARCHAR(255) NOT NULL UNIQUE,
-                password VARCHAR(255) NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-    
-    # Seed Categories
+    """
+    Initialize database tables.
+    With Django ORM and managed=False, tables are expected to exist.
+    This function now just ensures categories and roles are seeded.
+    """
+    # Seed Categories if they don't exist
     categories = ['General', 'Hair Style']
-    for cat in categories:
-        cursor.execute('INSERT IGNORE INTO categories (name) VALUES (%s)', (cat,))
-        
-    # Add category_id to gallery if not exists
-    cursor.execute("SHOW COLUMNS FROM gallery LIKE 'category_id'")
-    result = cursor.fetchone()
-    if not result:
-        cursor.execute('ALTER TABLE gallery ADD COLUMN category_id INT DEFAULT 1')
-        cursor.execute('ALTER TABLE gallery ADD CONSTRAINT fk_category FOREIGN KEY (category_id) REFERENCES categories(id)')
+    for cat_name in categories:
+        Category.objects.get_or_create(name=cat_name)
+    
+    # Seed Roles if they don't exist
+    roles = [
+        ('admin', 'Administrator with full access'),
+        ('user', 'Standard user with basic access'),
+        ('moderator', 'Moderator with elevated permissions')
+    ]
+    for role_name, role_desc in roles:
+        Role.objects.get_or_create(name=role_name, defaults={'description': role_desc})
 
-    conn.commit()
-    cursor.close()
-    conn.close()
+
 
 # ===== GALLERY FUNCTIONS =====
 
 def save_gallery_item(filename, text, timestamp, category_id=1):
-    """Save a gallery item to database"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('INSERT INTO gallery (filename, text, timestamp, category_id) VALUES (%s, %s, %s, %s)',
-                 (filename, text, timestamp, category_id))
-    inserted_id = cursor.lastrowid
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return inserted_id
+    """Save a gallery item to database using Django ORM"""
+    # Convert string timestamp to datetime if needed
+    if isinstance(timestamp, str):
+        timestamp = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+    
+    gallery_item = Gallery.objects.create(
+        filename=filename,
+        text=text,
+        timestamp=timestamp,
+        category_id=category_id
+    )
+    return gallery_item.id
+
 
 def get_gallery_items():
-    """Get all gallery items"""
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute('SELECT * FROM gallery ORDER BY id DESC')
-    items = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return items
+    """Get all gallery items using Django ORM"""
+    items = Gallery.objects.all().values(
+        'id', 'filename', 'text', 'timestamp', 'category_id'
+    )
+    # Convert QuerySet to list of dicts for compatibility
+    return list(items)
+
 
 def get_gallery_count():
-    """Get count of gallery items"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('SELECT COUNT(*) FROM gallery')
-    count = cursor.fetchone()[0]
-    cursor.close()
-    conn.close()
-    return count
+    """Get count of gallery items using Django ORM"""
+    return Gallery.objects.count()
+
 
 def delete_gallery_item(item_id):
-    """Delete a gallery item by ID"""
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    
-    # Get the filename before deleting
-    cursor.execute('SELECT filename FROM gallery WHERE id = %s', (item_id,))
-    item = cursor.fetchone()
-    
-    if not item:
-        cursor.close()
-        conn.close()
+    """Delete a gallery item by ID using Django ORM"""
+    try:
+        item = Gallery.objects.get(id=item_id)
+        filename = item.filename
+        item.delete()
+        return filename
+    except Gallery.DoesNotExist:
         return None
-    
-    filename = item['filename']
-    
-    # Delete from database
-    cursor.execute('DELETE FROM gallery WHERE id = %s', (item_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    
-    return filename
+
 
 # ===== USER FUNCTIONS =====
 
-def create_user(name, email, password, created_at=None, updated_at=None):
-    """Create a new user"""
-    from datetime import datetime
-    
+def create_user(name, email, password, created_at=None, updated_at=None, role_id=None):
+    """Create a new user using Django ORM"""
     # Set default timestamps if not provided
     if created_at is None:
-        created_at = datetime.now()
+        created_at = timezone.now()
     if updated_at is None:
-        updated_at = datetime.now()
+        updated_at = timezone.now()
+    # Default to 'user' role if not specified
+    if role_id is None:
+        role_id = 2
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute('INSERT INTO users (name, email, password,created_at,updated_at) VALUES (%s, %s, %s,%s,%s)', (name, email, password,created_at,updated_at))
-        user_id = cursor.lastrowid
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return user_id
-    except mysql.connector.IntegrityError:
-        cursor.close()
-        conn.close()
+        user = User.objects.create(
+            name=name,
+            email=email,
+            password=password,
+            role_id=role_id,
+            created_at=created_at,
+            updated_at=updated_at
+        )
+        return user.id
+    except IntegrityError:
         return None
 
+
 def get_all_users():
-    """Get all users"""
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute('SELECT id, name, email, created_at FROM users ORDER BY id DESC')
-    users = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return users
+    """Get all users with role information using Django ORM"""
+    users = User.objects.select_related('role').all().values(
+        'id', 'name', 'email', 'created_at', 'role_id', 'role__name', 'role__description'
+    )
+    # Transform the data to include role as nested object
+    result = []
+    for user in users:
+        result.append({
+            'id': user['id'],
+            'name': user['name'],
+            'email': user['email'],
+            'created_at': user['created_at'],
+            'role': {
+                'id': user['role_id'],
+                'name': user['role__name'],
+                'description': user['role__description']
+            } if user['role_id'] else None
+        })
+    return result
+
 
 def get_user_by_id(user_id):
-    """Get user by ID"""
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute('SELECT id, name, email, password, created_at FROM users WHERE id = %s', (user_id,))
-    user = cursor.fetchone()
-    cursor.close()
-    conn.close()
-    return user
+    """Get user by ID with role information using Django ORM"""
+    try:
+        user = User.objects.select_related('role').filter(id=user_id).values(
+            'id', 'name', 'email', 'password', 'created_at', 'role_id', 'role__name', 'role__description'
+        ).first()
+        
+        if user:
+            return {
+                'id': user['id'],
+                'name': user['name'],
+                'email': user['email'],
+                'password': user['password'],
+                'created_at': user['created_at'],
+                'role': {
+                    'id': user['role_id'],
+                    'name': user['role__name'],
+                    'description': user['role__description']
+                } if user['role_id'] else None
+            }
+        return None
+    except User.DoesNotExist:
+        return None
 
-def update_user(user_id, name, email, password, updated_at=None):
-    """Update user information"""
-    from datetime import datetime
-    
+
+def update_user(user_id, name, email, password, updated_at=None, role_id=None):
+    """Update user information using Django ORM"""
     # Set default timestamp if not provided
     if updated_at is None:
-        updated_at = datetime.now()
+        updated_at = timezone.now()
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute('UPDATE users SET name = %s, email = %s, password = %s, updated_at = %s WHERE id = %s', 
-                      (name, email, password, updated_at, user_id))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return True
-    except mysql.connector.IntegrityError:
-        cursor.close()
-        conn.close()
+        update_data = {
+            'name': name,
+            'email': email,
+            'password': password,
+            'updated_at': updated_at
+        }
+        
+        # Only update role_id if provided
+        if role_id is not None:
+            update_data['role_id'] = role_id
+        
+        updated_count = User.objects.filter(id=user_id).update(**update_data)
+        return updated_count > 0
+    except IntegrityError:
         return False
 
+
 def delete_user(user_id):
-    """Delete a user by ID"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM users WHERE id = %s', (user_id,))
-    conn.commit()
-    affected_rows = cursor.rowcount
-    cursor.close()
-    conn.close()
-    return affected_rows > 0
+    """Delete a user by ID using Django ORM"""
+    try:
+        user = User.objects.get(id=user_id)
+        user.delete()
+        return True
+    except User.DoesNotExist:
+        return False
+
+
+# ===== ROLE FUNCTIONS =====
+
+def create_role(name, description=None):
+    """Create a new role using Django ORM"""
+    try:
+        role = Role.objects.create(
+            name=name,
+            description=description
+        )
+        return role.id
+    except IntegrityError:
+        return None
+
+
+def get_all_roles():
+    """Get all roles using Django ORM"""
+    roles = Role.objects.all().values('id', 'name', 'description')
+    return list(roles)
+
+
+def get_role_by_id(role_id):
+    """Get role by ID using Django ORM"""
+    try:
+        role = Role.objects.filter(id=role_id).values(
+            'id', 'name', 'description'
+        ).first()
+        return role
+    except Role.DoesNotExist:
+        return None
+
+
+def update_role(role_id, name, description=None):
+    """Update role information using Django ORM"""
+    try:
+        updated_count = Role.objects.filter(id=role_id).update(
+            name=name,
+            description=description
+        )
+        return updated_count > 0
+    except IntegrityError:
+        return False
+
+
+def delete_role(role_id):
+    """Delete a role by ID using Django ORM"""
+    try:
+        role = Role.objects.get(id=role_id)
+        role.delete()
+        return True
+    except Role.DoesNotExist:
+        return False
+
 
 def get_categories():
-    """Get all categories"""
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute('SELECT * FROM categories')
-    categories = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return categories
+    """Get all categories using Django ORM"""
+    categories = Category.objects.all().values('id', 'name')
+    return list(categories)
+

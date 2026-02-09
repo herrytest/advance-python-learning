@@ -87,7 +87,7 @@ def users():
 
 def fetch_stock_data():
     stocks = []
-    
+    return stocks
     # --- 1. BSE SENSEX (via yfinance) ---
     try:
         bsesn = yf.Ticker("^BSESN")

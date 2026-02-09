@@ -10,6 +10,8 @@ pydantic_core==2.41.5
 
 # Database
 mysql-connector-python==9.5.0
+Django==5.0.1
+pymysql
 
 # Data Processing
 pandas==3.0.0

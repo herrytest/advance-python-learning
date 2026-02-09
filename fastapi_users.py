@@ -4,7 +4,8 @@ from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from datetime import datetime
 from db import (create_user, get_all_users, get_user_by_id, 
-                update_user, delete_user)
+                update_user, delete_user, create_role, get_all_roles,
+                get_role_by_id, update_role, delete_role)
 
 app = FastAPI(title="User Management API", version="1.0.0")
 
@@ -18,21 +19,43 @@ app.add_middleware(
 )
 
 # Pydantic Models
+
+# Role Models
+class RoleResponse(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class RoleCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class RoleUpdate(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+# User Models
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
+    role_id: Optional[int] = 2  # Default to 'user' role
 
 class UserUpdate(BaseModel):
     name: str
     email: EmailStr
     password: str
+    role_id: Optional[int] = None
 
 class UserResponse(BaseModel):
     id: int
     name: str
     email: str
     created_at: Optional[datetime] = None
+    role: Optional[RoleResponse] = None
 
     class Config:
         from_attributes = True
@@ -121,7 +144,7 @@ def create_user_endpoint(user: UserCreate):
     """Create a new user"""
     created_at = datetime.now()
     updated_at = datetime.now()
-    user_id = create_user(user.name, user.email, user.password,created_at,updated_at)
+    user_id = create_user(user.name, user.email, user.password, created_at, updated_at, user.role_id)
     if user_id:
         return {"success": True, "id": user_id, "message": "User created successfully"}
     else:
@@ -145,7 +168,7 @@ def get_user_endpoint(user_id: int):
 def update_user_endpoint(user_id: int, user: UserUpdate):
     """Update user"""
     updated_at = datetime.now()
-    success = update_user(user_id, user.name, user.email, user.password, updated_at)
+    success = update_user(user_id, user.name, user.email, user.password, updated_at, user.role_id)
     if success:
         return {"success": True, "message": "User updated successfully"}
     else:
@@ -159,6 +182,49 @@ def delete_user_endpoint(user_id: int):
         return {"success": True, "message": "User deleted successfully"}
     else:
         raise HTTPException(status_code=404, detail="User not found")
+
+# ===== ROLE MANAGEMENT ENDPOINTS =====
+
+@app.post("/api/roles", response_model=dict, status_code=201)
+def create_role_endpoint(role: RoleCreate):
+    """Create a new role"""
+    role_id = create_role(role.name, role.description)
+    if role_id:
+        return {"success": True, "id": role_id, "message": "Role created successfully"}
+    else:
+        raise HTTPException(status_code=400, detail="Role name already exists")
+
+@app.get("/api/roles", response_model=List[RoleResponse])
+def get_roles_endpoint():
+    """Get all roles"""
+    roles = get_all_roles()
+    return roles
+
+@app.get("/api/roles/{role_id}", response_model=RoleResponse)
+def get_role_endpoint(role_id: int):
+    """Get role by ID"""
+    role = get_role_by_id(role_id)
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+    return role
+
+@app.put("/api/roles/{role_id}", response_model=dict)
+def update_role_endpoint(role_id: int, role: RoleUpdate):
+    """Update role"""
+    success = update_role(role_id, role.name, role.description)
+    if success:
+        return {"success": True, "message": "Role updated successfully"}
+    else:
+        raise HTTPException(status_code=400, detail="Role name already exists or role not found")
+
+@app.delete("/api/roles/{role_id}", response_model=dict)
+def delete_role_endpoint(role_id: int):
+    """Delete role"""
+    success = delete_role(role_id)
+    if success:
+        return {"success": True, "message": "Role deleted successfully"}
+    else:
+        raise HTTPException(status_code=404, detail="Role not found")
 
 if __name__ == "__main__":
     import uvicorn
