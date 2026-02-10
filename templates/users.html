@@ -9,8 +9,10 @@
 
         <!-- Create User Form -->
         <div style="background: rgba(255, 255, 255, 0.03); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
-            <h3 style="margin-bottom: 1.5rem; font-size: 1.2rem; color: var(--primary-color);">Create New User</h3>
-            <form id="createUserForm" onsubmit="createUser(event)">
+            <h3 id="formTitle" style="margin-bottom: 1.5rem; font-size: 1.2rem; color: var(--primary-color);">Create New
+                User</h3>
+            <form id="userForm" onsubmit="handleUserSubmit(event)">
+                <input type="hidden" id="userId" name="userId">
                 <div
                     style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                     <div class="form-group" style="margin: 0;">
@@ -30,14 +32,20 @@
                     <div class="form-group" style="margin: 0;">
                         <label for="password"
                             style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted);">Password</label>
-                        <input type="text" id="password" name="password" placeholder="Enter password" required
+                        <input type="text" id="password" name="password" placeholder="Enter password"
                             style="width: 100%; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: white;" />
+                        <small style="color: var(--text-muted); font-size: 0.8rem; display: none;"
+                            id="passwordHint">Leave blank to keep current password</small>
                     </div>
 
-                    <div style="display: flex; align-items: flex-end;">
-                        <button type="submit"
-                            style="width: 100%; padding: 0.75rem; background: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    <div style="display: flex; align-items: flex-end; gap: 1rem;">
+                        <button type="submit" id="submitBtn"
+                            style="flex: 1; padding: 0.75rem; background: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
                             ➕ Create User
+                        </button>
+                        <button type="button" id="cancelBtn" onclick="resetForm()"
+                            style="display: none; flex: 1; padding: 0.75rem; background: rgba(255, 255, 255, 0.1); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                            ❌ Cancel
                         </button>
                     </div>
                 </div>
@@ -52,7 +60,7 @@
             <h3 style="margin-bottom: 1.5rem; font-size: 1.2rem;">All Users <span id="userCount">(0)</span></h3>
 
             <div id="usersTableContainer"
-                style="overflow-x: auto; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                style="overflow-x: auto; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 1rem;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr style="background: rgba(255, 255, 255, 0.05);">
@@ -79,22 +87,42 @@
                 </table>
             </div>
 
-            <div id="emptyState"
-                style="display: none; text-align: center; padding: 3rem; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 2px dashed rgba(255, 255, 255, 0.1);">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">👤</div>
-                <p style="color: var(--text-muted); font-size: 1.1rem;">No users found</p>
-                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Create your first user
-                    above!</p>
+            <!-- Pagination Controls -->
+            <!-- Pagination Controls -->
+            <div id="paginationControls" class="pagination-container">
+                <span id="pageInfo" style="color: var(--text-muted); font-size: 0.9rem; margin-right: 1rem;">Page 1 of
+                    1</span>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="prevBtn" onclick="changePage(-1)" class="pagination-btn">
+                        ⬅️
+                    </button>
+                    <button id="nextBtn" onclick="changePage(1)" class="pagination-btn">
+                        ➡️
+                    </button>
+                </div>
             </div>
         </div>
+
+        <div id="emptyState"
+            style="display: none; text-align: center; padding: 3rem; background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 2px dashed rgba(255, 255, 255, 0.1);">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">👤</div>
+            <p style="color: var(--text-muted); font-size: 1.1rem;">No users found</p>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Create your first user
+                above!</p>
+        </div>
     </div>
+</div>
 </div>
 
 <script>
     const API_BASE_URL = 'http://127.0.0.1:8000/api/users';
+    let usersData = []; // Store users locally
+    let currentPage = 1;
+    let pageSize = 10;
+    let totalPages = 1;
 
     // Load users on page load
-    document.addEventListener('DOMContentLoaded', loadUsers);
+    document.addEventListener('DOMContentLoaded', () => loadUsers(currentPage));
 
     function showMessage(message, isSuccess = true) {
         const messageBox = document.getElementById('messageBox');
@@ -109,23 +137,42 @@
         }, 5000);
     }
 
-    async function loadUsers() {
+    async function loadUsers(page = 1) {
         try {
-            const response = await fetch(API_BASE_URL);
-            const users = await response.json();
+            const response = await fetch(`${API_BASE_URL}?page=${page}&size=${pageSize}`);
+            const data = await response.json();
+
+            // Handle both structure (array for old API, object for new paginated API)
+            // But we know it's paginated now
+            const users = data.items || [];
+            const total = data.total || 0;
+            currentPage = data.page || page;
+            totalPages = data.pages || 1;
+
+            usersData = users; // Store for edit
 
             const tbody = document.getElementById('usersTableBody');
             const emptyState = document.getElementById('emptyState');
             const tableContainer = document.getElementById('usersTableContainer');
             const userCount = document.getElementById('userCount');
+            const paginationControls = document.getElementById('paginationControls');
 
-            userCount.textContent = `(${users.length})`;
+            userCount.textContent = `(${total})`;
 
-            if (users.length === 0) {
+            // Update Pagination UI
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('prevBtn').disabled = currentPage <= 1;
+            document.getElementById('prevBtn').style.opacity = currentPage <= 1 ? '0.5' : '1';
+            document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+            document.getElementById('nextBtn').style.opacity = currentPage >= totalPages ? '0.5' : '1';
+
+            if (users.length === 0 && currentPage === 1) {
                 tableContainer.style.display = 'none';
+                paginationControls.style.display = 'none';
                 emptyState.style.display = 'block';
             } else {
                 tableContainer.style.display = 'block';
+                paginationControls.style.display = 'flex';
                 emptyState.style.display = 'none';
 
                 tbody.innerHTML = users.map(user => `
@@ -151,23 +198,55 @@
             }
         } catch (error) {
             console.error('Error loading users:', error);
-            showMessage('Error loading users. Make sure FastAPI server is running on port 8000.', false);
+            showMessage('Error loading users. Make sure FastAPI server is running.', false);
         }
     }
 
-    async function createUser(event) {
+    function changePage(delta) {
+        const newPage = currentPage + delta;
+        if (newPage >= 1 && newPage <= totalPages) {
+            loadUsers(newPage);
+        }
+    }
+
+    async function handleUserSubmit(event) {
         event.preventDefault();
 
         const formData = new FormData(event.target);
+        const userId = formData.get('userId');
+        const isEdit = !!userId;
+
         const userData = {
             name: formData.get('name'),
             email: formData.get('email'),
             password: formData.get('password')
         };
 
+        // For edit, if password is empty, don't send it or handle in backend
+        // This simple backend might require password, let's check.
+        // If password field is empty during edit and we want to keep it, 
+        // we might need to fetch the existing user's password which is not safe/ideal, 
+        // or backend should handle partial updates.
+        // Assuming backend requires password for now or we must provide one.
+        // If the user didn't type a password in edit mode, checking if we can skip it.
+        // Looking at FastAPI UserUpdate model: password: str is required.
+        // So user MUST provide password to update for now.
+
+        if (isEdit && !userData.password) {
+            // If we really want to support "leave blank to keep", 
+            // we'd need to change backend UserUpdate to have optional password
+            // OR fetch current user data and send it back.
+            // For now, let's just make it required or alert
+            alert("Please enter a password to update user (required by API)");
+            return;
+        }
+
+        const url = isEdit ? `${API_BASE_URL}/${userId}` : API_BASE_URL;
+        const method = isEdit ? 'PUT' : 'POST';
+
         try {
-            const response = await fetch(API_BASE_URL, {
-                method: 'POST',
+            const response = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json'
                 },
@@ -177,20 +256,46 @@
             const data = await response.json();
 
             if (response.ok) {
-                showMessage('✅ User created successfully!', true);
-                event.target.reset();
-                loadUsers();
+                showMessage(`✅ User ${isEdit ? 'updated' : 'created'} successfully!`, true);
+                resetForm();
+                loadUsers(currentPage);
             } else {
-                showMessage(`❌ ${data.detail || 'Error creating user'}`, false);
+                showMessage(`❌ ${data.detail || 'Error processing request'}`, false);
             }
         } catch (error) {
-            console.error('Error creating user:', error);
-            showMessage('❌ Error creating user. Make sure FastAPI server is running.', false);
+            console.error('Error:', error);
+            showMessage(`❌ Error. Make sure FastAPI server is running.`, false);
         }
     }
 
     function editUser(userId) {
-        window.location.href = `/edit_user/${userId}`;
+        const user = usersData.find(u => u.id === userId);
+        if (!user) return;
+
+        document.getElementById('userId').value = user.id;
+        document.getElementById('name').value = user.name;
+        document.getElementById('email').value = user.email;
+        document.getElementById('password').value = ""; // Don't fill password
+
+        // Update UI
+        document.getElementById('formTitle').textContent = "Edit User";
+        document.getElementById('submitBtn').innerHTML = "💾 Update";
+        document.getElementById('cancelBtn').style.display = "block";
+        document.getElementById('passwordHint').style.display = "block";
+
+        // Scroll to form
+        document.getElementById('userForm').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetForm() {
+        document.getElementById('userForm').reset();
+        document.getElementById('userId').value = "";
+
+        // Reset UI
+        document.getElementById('formTitle').textContent = "Create New User";
+        document.getElementById('submitBtn').innerHTML = "➕ Create User";
+        document.getElementById('cancelBtn').style.display = "none";
+        document.getElementById('passwordHint').style.display = "none";
     }
 
     async function deleteUser(userId) {
@@ -211,7 +316,9 @@
                 row.style.transform = 'translateX(-20px)';
                 setTimeout(() => {
                     row.remove();
-                    loadUsers();
+                    // Update local data
+                    usersData = usersData.filter(u => u.id !== userId);
+                    loadUsers(currentPage); // Reload current page
                 }, 300);
                 showMessage('✅ User deleted successfully!', true);
             } else {
@@ -222,6 +329,7 @@
             showMessage('❌ Error deleting user. Make sure FastAPI server is running.', false);
         }
     }
+
 </script>
 
 <style>
@@ -233,6 +341,33 @@
     a:hover {
         opacity: 0.9;
         transform: translateY(-1px);
+    }
+
+    .pagination-container {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        padding: 1rem 0;
+    }
+
+    .pagination-btn {
+        padding: 0.5rem 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .pagination-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.2);
     }
 </style>
 {% endblock %}

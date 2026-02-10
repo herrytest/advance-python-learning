@@ -12,6 +12,8 @@ pydantic_core==2.41.5
 mysql-connector-python==9.5.0
 Django==5.0.1
 pymysql
+cryptography
+
 
 # Data Processing
 pandas==3.0.0

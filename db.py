@@ -11,9 +11,38 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_settings')
 django.setup()
 
 from models import Gallery, Category, User, Role
-from django.utils import timezone
-from datetime import datetime
-from django.db import IntegrityError
+from django.core.paginator import Paginator, EmptyPage
+
+# ... (existing imports)
+
+def get_all_users(page=1, page_size=10):
+    """Get all users with role information using Django ORM and Paginator"""
+    queryset = User.objects.select_related('role').all().order_by('-created_at')
+    paginator = Paginator(queryset, page_size)
+    
+    try:
+        users_page = paginator.page(page)
+        users = users_page.object_list
+    except EmptyPage:
+        users = []
+    except Exception:
+         users = []
+
+    # Transform the data to include role as nested object
+    result = []
+    for user in users:
+        result.append({
+            'id': user.id,
+            'name': user.name,
+            'email': user.email,
+            'created_at': user.created_at,
+            'role': {
+                'id': user.role.id,
+                'name': user.role.name,
+                'description': user.role.description
+            } if user.role else None
+        })
+    return {'users': result, 'total': paginator.count}
 
 
 # Database Configuration (kept for reference, now in django_settings.py)
@@ -117,26 +146,34 @@ def create_user(name, email, password, created_at=None, updated_at=None, role_id
         return None
 
 
-def get_all_users():
-    """Get all users with role information using Django ORM"""
-    users = User.objects.select_related('role').all().values(
-        'id', 'name', 'email', 'created_at', 'role_id', 'role__name', 'role__description'
-    )
+def get_all_users(page=1, page_size=10):
+    """Get all users with role information using Django ORM and Paginator"""
+    queryset = User.objects.select_related('role').all().order_by('-created_at')
+    paginator = Paginator(queryset, page_size)
+    
+    try:
+        users_page = paginator.page(page)
+        users = users_page.object_list
+    except EmptyPage:
+        users = []
+    except Exception:
+         users = []
+
     # Transform the data to include role as nested object
     result = []
     for user in users:
         result.append({
-            'id': user['id'],
-            'name': user['name'],
-            'email': user['email'],
-            'created_at': user['created_at'],
+            'id': user.id,
+            'name': user.name,
+            'email': user.email,
+            'created_at': user.created_at,
             'role': {
-                'id': user['role_id'],
-                'name': user['role__name'],
-                'description': user['role__description']
-            } if user['role_id'] else None
+                'id': user.role.id,
+                'name': user.role.name,
+                'description': user.role.description
+            } if user.role else None
         })
-    return result
+    return {'users': result, 'total': paginator.count}
 
 
 def get_user_by_id(user_id):

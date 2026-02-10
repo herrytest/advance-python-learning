@@ -150,11 +150,28 @@ def create_user_endpoint(user: UserCreate):
     else:
         raise HTTPException(status_code=400, detail="Name or Email already exists")
 
-@app.get("/api/users", response_model=List[UserResponse])
-def get_users_endpoint():
-    """Get all users"""
-    users = get_all_users()
-    return users
+class PaginatedUserResponse(BaseModel):
+    items: List[UserResponse]
+    total: int
+    page: int
+    size: int
+    pages: int
+
+@app.get("/api/users", response_model=PaginatedUserResponse)
+def get_users_endpoint(page: int = 1, size: int = 10):
+    """Get all users with pagination"""
+    data = get_all_users(page=page, page_size=size)
+    
+    total = data['total']
+    pages = (total + size - 1) // size
+    
+    return {
+        "items": data['users'],
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": pages
+    }
 
 @app.get("/api/users/{user_id}", response_model=UserDetailResponse)
 def get_user_endpoint(user_id: int):
