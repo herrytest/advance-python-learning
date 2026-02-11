@@ -99,8 +99,13 @@ def get_gallery_items():
     items = Gallery.objects.all().values(
         'id', 'filename', 'text', 'timestamp', 'category_id'
     )
-    # Convert QuerySet to list of dicts for compatibility
-    return list(items)
+    # Convert QuerySet to list of dicts and format timestamp
+    data = []
+    for item in items:
+        if item['timestamp']:
+            item['timestamp'] = item['timestamp'].strftime("%Y-%m-%d %H:%M:%S")
+        data.append(item)
+    return data
 
 
 def get_gallery_count():

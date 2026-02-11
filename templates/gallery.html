@@ -39,7 +39,7 @@
         <div class="gallery-image-wrapper">
             <img src="{{ url_for('uploaded_file', filename=item.filename) }}" alt="Uploaded Image" loading="lazy">
             <div class="gallery-overlay">
-                <button class="view-btn icon-btn" onclick='showDetails({{ item | tojson }})'>
+                <button class="view-btn icon-btn" onclick="showDetails({{ item | tojson | forceescape }})">
                     <span>👁️</span> View
                 </button>
                 <button class="delete-btn icon-btn" onclick='deleteItem({{ item.id }}, event)'
@@ -361,7 +361,7 @@
             <div class="gallery-image-wrapper">
                 <img src="/uploads/${entry.filename}" alt="Uploaded Image" loading="lazy">
                 <div class="gallery-overlay">
-                    <button class="view-btn icon-btn" onclick='showDetails(${JSON.stringify(entry)})'>
+                    <button class="view-btn icon-btn" onclick='showDetails(${JSON.stringify(entry).replace(/'/g, "&#39;")})'>
                         <span>👁️</span> View
                     </button>
                     <button class="delete-btn icon-btn" onclick='deleteItem(${entry.id}, event)' style="background: rgba(239, 68, 68, 0.9); margin-left: 8px;">
