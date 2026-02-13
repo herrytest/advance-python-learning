@@ -53,7 +53,7 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     name: str
     email: EmailStr
-    password: str
+    password: Optional[str] = None
     role_id: Optional[int] = None
 
 class UserResponse(BaseModel):

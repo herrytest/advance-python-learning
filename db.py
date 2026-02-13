@@ -218,9 +218,12 @@ def update_user(user_id, name, email, password, updated_at=None, role_id=None):
         update_data = {
             'name': name,
             'email': email,
-            'password': password,
             'updated_at': updated_at
         }
+        
+        # Only update password if provided
+        if password:
+            update_data['password'] = password
         
         # Only update role_id if provided
         if role_id is not None:

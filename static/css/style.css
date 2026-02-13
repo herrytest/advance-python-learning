@@ -241,6 +241,22 @@ button:hover {
     transform: translateY(-1px);
 }
 
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--primary-color);
+}
+
 /* File Upload Specific */
 .upload-area {
     border: 2px dashed var(--border-color);

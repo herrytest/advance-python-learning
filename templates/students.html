@@ -33,15 +33,19 @@
                         <input type="text" id="course" name="course" placeholder="Enter course" required />
                     </div>
 
-                    <div style="display: flex; align-items: flex-end; gap: 1rem;">
-                        <button type="submit" id="submitBtn"
-                            style="flex: 1; padding: 0.75rem; background: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                            ➕ Add Student
-                        </button>
-                        <button type="button" id="cancelBtn" onclick="resetForm()"
-                            style="display: none; flex: 1; padding: 0.75rem; background: rgba(255, 255, 255, 0.1); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                            ❌ Cancel
-                        </button>
+                    <div class="form-group" style="margin: 0;">
+                        <label
+                            style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; visibility: hidden;">Actions</label>
+                        <div style="display: flex; gap: 1rem;">
+                            <button type="submit" id="submitBtn" class="btn-primary"
+                                style="flex: 1; padding: 0.75rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: white;">
+                                ➕ Add Student
+                            </button>
+                            <button type="button" id="cancelBtn" onclick="resetForm()" class="btn-secondary"
+                                style="display: none; flex: 1; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; font-weight: 600; background: rgba(255,255,255,0.05); color: var(--text-color);">
+                                ❌ Cancel
+                            </button>
+                        </div>
                     </div>
                 </div>
             </form>
