@@ -267,7 +267,7 @@ This project is for educational purposes.
 
 ## 👨‍💻 Author
 
-**Hiren** - [GitHub](https://github.com/kukadiyahiren)
+**Hiren Kukadiya** - [GitHub](https://github.com/kukadiyahiren)
 
 ## 🙏 Acknowledgments
 
