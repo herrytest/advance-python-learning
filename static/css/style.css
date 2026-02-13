@@ -2,9 +2,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap');
 
 :root {
+    /* Base Colors */
     --primary-color: #6366f1;
     --primary-hover: #4f46e5;
     --secondary-color: #ec4899;
+
+    /* Default Theme (Midnight) Variables */
     --bg-color: #0f172a;
     --card-bg: rgba(255, 255, 255, 0.05);
     --text-color: #f8fafc;
@@ -12,6 +15,48 @@
     --border-color: rgba(255, 255, 255, 0.1);
     --gradient-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
     --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    --navbar-bg: rgba(15, 23, 42, 0.8);
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --input-focus-bg: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] {
+    --bg-color: #f8fafc;
+    --card-bg: rgba(255, 255, 255, 0.9);
+    --text-color: #0f172a;
+    --text-muted: #64748b;
+    --border-color: rgba(0, 0, 0, 0.1);
+    --gradient-bg: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --navbar-bg: rgba(255, 255, 255, 0.8);
+    --input-bg: rgba(0, 0, 0, 0.05);
+    --input-focus-bg: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] {
+    --bg-color: #121212;
+    --card-bg: rgba(255, 255, 255, 0.05);
+    --text-color: #e2e8f0;
+    --text-muted: #a3a3a3;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --gradient-bg: linear-gradient(135deg, #121212 0%, #1e1e1e 100%);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    --navbar-bg: rgba(18, 18, 18, 0.8);
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --input-focus-bg: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="midnight"] {
+    --bg-color: #0f172a;
+    --card-bg: rgba(255, 255, 255, 0.05);
+    --text-color: #f8fafc;
+    --text-muted: #94a3b8;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --gradient-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    --navbar-bg: rgba(15, 23, 42, 0.8);
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --input-focus-bg: rgba(255, 255, 255, 0.1);
 }
 
 * {
@@ -27,6 +72,7 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    transition: background 0.3s ease, color 0.3s ease;
     overflow-x: hidden;
 }
 
@@ -48,6 +94,7 @@ a:hover {
     border: 1px solid var(--border-color);
     border-radius: 16px;
     box-shadow: var(--glass-shadow);
+    transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* Layout */
@@ -59,16 +106,17 @@ a:hover {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(15, 23, 42, 0.8);
+    background: var(--navbar-bg);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border-color);
+    transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .navbar-brand {
     font-size: 1.5rem;
     font-weight: 700;
-    color: white;
-    /* Ensure brand is white */
+    color: var(--text-color);
+    /* Ensure brand is visible in all themes */
 }
 
 .navbar-brand span {
@@ -152,14 +200,19 @@ label {
 
 input[type="text"],
 input[type="password"],
+input[type="email"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
 input[type="file"],
 textarea {
     width: 100%;
     padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--input-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    color: white;
+    color: var(--text-color);
     font-family: inherit;
     transition: all 0.3s ease;
 }
@@ -168,7 +221,7 @@ input:focus,
 textarea:focus {
     outline: none;
     border-color: var(--primary-color);
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--input-focus-bg);
 }
 
 button {
@@ -373,7 +426,8 @@ li {
     width: 100%;
     padding-top: 60%;
     /* Aspect ratio */
-    background: #000;
+    background: var(--card-bg);
+    /* Placeholder color */
     overflow: hidden;
 }
 
@@ -428,6 +482,7 @@ li {
     line-height: 1.5;
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -688,11 +743,420 @@ li {
     border-radius: 2px;
     margin-bottom: 1rem;
     overflow: hidden;
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: background 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    /* Override global button width */
 }
 
-.progress-bar {
-    height: 100%;
+.theme-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: none;
+    /* Override global hover */
+}
+
+.theme-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 150px;
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.5rem;
+    box-shadow: var(--glass-shadow);
+    display: none;
+    flex-direction: column;
+    gap: 0.2rem;
+    z-index: 1000;
+    margin-top: 0.5rem;
+}
+
+.theme-menu.active {
+    display: flex;
+}
+
+.theme-option {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    transition: background 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+
+/* --- UI Polish & Animations --- */
+
+/* Keyframes */
+@keyframes slideUpFade {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- Animated Gradient Mesh Background --- */
+.mesh-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    overflow: hidden;
+    background: var(--bg-color);
+    /* Fallback */
+}
+
+.mesh-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    /* Soft blur for mesh effect */
+    opacity: 0.15;
+    /* Very low opacity as requested */
+    animation: floating 20s infinite ease-in-out alternate;
+    will-change: transform;
+    /* Hint for GPU acceleration */
+}
+
+/* Blob specific colors/sizes/positions */
+.mesh-blob-1 {
+    top: -10%;
+    left: -10%;
+    width: 50vw;
+    height: 50vw;
     background: var(--primary-color);
-    width: 0%;
-    transition: width 0.1s linear;
+    animation-duration: 25s;
+}
+
+.mesh-blob-2 {
+    bottom: -10%;
+    right: -10%;
+    width: 60vw;
+    height: 60vw;
+    background: var(--secondary-color);
+    animation-delay: -5s;
+    animation-duration: 30s;
+}
+
+.mesh-blob-3 {
+    top: 40%;
+    left: 40%;
+    width: 40vw;
+    height: 40vw;
+    background: #8b5cf6;
+    /* Additional accent color */
+    opacity: 0.1;
+    animation-delay: -10s;
+    animation-duration: 22s;
+}
+
+@keyframes floating {
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    33% {
+        transform: translate(30px, -50px) scale(1.1);
+    }
+
+    66% {
+        transform: translate(-20px, 20px) scale(0.9);
+    }
+
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+}
+
+/* --- Section Parallax (Desktop Only) --- */
+@media (min-width: 769px) {
+    .parallax-section {
+        transition: transform 0.1s linear;
+        /* Smooth but responsive */
+        will-change: transform;
+    }
+
+    /* Slightly offset content for depth */
+    .container {
+        /* We'll manipulate this via JS transform or margin, 
+           or use specific parallax-layer classes */
+    }
+}
+
+
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* Entrance Animations */
+.animate-enter {
+    animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+    /* Start hidden */
+}
+
+.delay-100 {
+    animation-delay: 0.1s;
+}
+
+.delay-200 {
+    animation-delay: 0.2s;
+}
+
+.delay-300 {
+    animation-delay: 0.3s;
+}
+
+/* Enhanced Hover Effects */
+.glass-panel {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+        box-shadow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+        background 0.3s ease, border-color 0.3s ease;
+}
+
+.glass-panel:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+    border-color: var(--primary-color);
+}
+
+button {
+    position: relative;
+    overflow: hidden;
+}
+
+button::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+button:hover::after {
+    opacity: 1;
+}
+
+button:hover {
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+    /* Primary color glow */
+}
+
+/* Skeleton Loader */
+.skeleton {
+    background: linear-gradient(90deg,
+            rgba(255, 255, 255, 0.05) 25%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0.05) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 6px;
+}
+
+[data-theme="light"] .skeleton {
+    background: linear-gradient(90deg,
+            rgba(0, 0, 0, 0.05) 25%,
+            rgba(0, 0, 0, 0.1) 50%,
+            rgba(0, 0, 0, 0.05) 75%);
+    background-size: 200% 100%;
+}
+
+.skeleton-text {
+    height: 1em;
+    margin-bottom: 0.5rem;
+    width: 100%;
+}
+
+/* --- Bento Grid System --- */
+
+.bento-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: minmax(140px, auto);
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+/* Spans */
+.col-span-1 {
+    grid-column: span 1;
+}
+
+.col-span-2 {
+    grid-column: span 2;
+}
+
+.col-span-3 {
+    grid-column: span 3;
+}
+
+.col-span-4 {
+    grid-column: span 4;
+}
+
+.row-span-1 {
+    grid-row: span 1;
+}
+
+.row-span-2 {
+    grid-row: span 2;
+}
+
+/* Mobile Response */
+@media (max-width: 1024px) {
+    .bento-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .col-span-1,
+    .col-span-2,
+    .col-span-3,
+    .col-span-4 {
+        grid-column: span 2;
+        /* Full width on tablet */
+    }
+
+    .row-span-2 {
+        grid-row: span 1;
+    }
+
+    /* Re-enable spans for tablet if needed, but safer to stack */
+}
+
+@media (max-width: 640px) {
+    .bento-grid {
+        display: flex;
+        flex-direction: column;
+    }
+}
+
+/* Bento Tile Base */
+.bento-tile {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* Timeline Component */
+.timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+    position: relative;
+    padding-left: 1rem;
+}
+
+.timeline-list::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.5rem;
+    bottom: 0.5rem;
+    width: 2px;
+    background: var(--border-color);
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: -0.35rem;
+    /* Center on line (line left is 0, width 2px. dot width 10px. left approx -4px) */
+    top: 0.2rem;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--bg-color);
+    /* fake border */
+}
+
+.timeline-content h4 {
+    font-size: 0.9rem;
+    margin-bottom: 0.2rem;
+    color: var(--text-color);
+}
+
+.timeline-time {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* Chip style for small stats */
+.stat-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+}
+
+.stat-chip .icon {
+    font-size: 1.5rem;
+    opacity: 0.8;
+}
+
+.stat-chip .info {
+    text-align: right;
+}
+
+/* Market Ticker Bar */
+.market-ticker {
+    display: flex;
+    gap: 2rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+.market-ticker::-webkit-scrollbar {
+    display: none;
+    /* Chrome */
+}
+
+.ticker-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 120px;
+    padding-right: 1.5rem;
+    border-right: 1px solid var(--border-color);
+}
+
+.ticker-item:last-child {
+    border-right: none;
 }

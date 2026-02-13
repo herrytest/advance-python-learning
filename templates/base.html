@@ -12,6 +12,7 @@
     <script src="https://unpkg.com/htmx.org@1.9.10"
         integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC"
         crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
     <style>
         .nav-item.active {
@@ -51,6 +52,13 @@
 
 <body hx-boost="true">
 
+    <!-- Animated Gradient Mesh Background -->
+    <div class="mesh-background" aria-hidden="true">
+        <div class="mesh-blob mesh-blob-1"></div>
+        <div class="mesh-blob mesh-blob-2"></div>
+        <div class="mesh-blob mesh-blob-3"></div>
+    </div>
+
     <!-- Page Loader -->
     <div class="loader-overlay" id="pageLoader">
         <div class="spinner"></div>
@@ -73,13 +81,70 @@
             {% else %}
             <a href="{{ url_for('login') }}" class="nav-item">Login</a>
             {% endif %}
+
+            <!-- Theme Toggle -->
+            <div class="theme-toggle">
+                <button id="themeBtn" class="nav-item theme-btn" title="Toggle Theme">
+                    <span id="themeIcon">🌙</span>
+                </button>
+                <div class="theme-menu" id="themeMenu">
+                    <div class="theme-option" data-value="midnight">🌌 Midnight</div>
+                    <div class="theme-option" data-value="dark">🌑 Dark</div>
+                    <div class="theme-option" data-value="light">☀️ Light</div>
+                </div>
+            </div>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <div class="container fade-content" id="mainContent">
+    <div class="container fade-content parallax-section" id="mainContent">
         {% block content %}{% endblock %}
     </div>
+
+    <!-- Theme Script -->
+    <script>
+        (function () {
+            const themeBtn = document.getElementById('themeBtn');
+            const themeMenu = document.getElementById('themeMenu');
+            const themeOptions = document.querySelectorAll('.theme-option');
+            const themeIcon = document.getElementById('themeIcon');
+
+            // Icons map
+            const icons = {
+                'midnight': '🌌',
+                'dark': '🌑',
+                'light': '☀️'
+            };
+
+            // Load saved theme
+            const savedTheme = localStorage.getItem('theme') || 'midnight';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            if (themeIcon) themeIcon.textContent = icons[savedTheme];
+
+            // Toggle menu
+            if (themeBtn) {
+                themeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    themeMenu.classList.toggle('active');
+                });
+            }
+
+            // Close menu on outside click
+            document.addEventListener('click', () => {
+                if (themeMenu) themeMenu.classList.remove('active');
+            });
+
+            // Handle selection
+            themeOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    const theme = option.getAttribute('data-value');
+                    document.documentElement.setAttribute('data-theme', theme);
+                    localStorage.setItem('theme', theme);
+                    if (themeIcon) themeIcon.textContent = icons[theme];
+                });
+            });
+        })();
+    </script>
 
     <script>
         // Handle Active Link Highlighting
@@ -126,6 +191,46 @@
                 document.getElementById('pageLoader').classList.add('active');
             }
         });
+
+        // --- Parallax Effect (Desktop Only) ---
+        if (window.innerWidth > 768) {
+            let lastScrollY = window.scrollY;
+            const content = document.querySelector('.parallax-section');
+            const blobs = document.querySelectorAll('.mesh-blob');
+
+            // Throttled scroll listener
+            let ticking = false;
+            window.addEventListener('scroll', function () {
+                if (!ticking) {
+                    window.requestAnimationFrame(function () {
+                        const ScrollY = window.scrollY;
+
+                        // Move content slightly differently than scroll for depth
+                        // Actually, standard parallax often moves background slower.
+                        // Since background is fixed, let's move the blobs slightly to give life.
+
+                        blobs.forEach((blob, index) => {
+                            const speed = (index + 1) * 0.05;
+                            const yPos = ScrollY * speed;
+                            // blob.style.transform = `translateY(${yPos}px)`; 
+                            // Note: This conflicts with the animation property 'transform'. 
+                            // We should use 'top' or a nested transform if we want both.
+                            // OR, just update margin-top which is cheaper than reprocessing keyframes? 
+                            // No, margin causes layout. Transform is better.
+                            // Let's use margin-top for scroll parallax on blobs to interact with their float animation transform
+                            blob.style.marginTop = `${yPos}px`;
+                        });
+
+                        // Parallax on content?
+                        // Maybe just the header elements or specific sections.
+                        // For now, let's keep content standard scroll to avoid jitter, just animate bg.
+
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            });
+        }
     </script>
 </body>
 

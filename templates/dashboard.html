@@ -8,48 +8,148 @@
     <p style="color: var(--text-muted);">{{ userData.email }} | Developer Profile</p>
 </div>
 
-<div class="dashboard-grid">
-    <!-- Stock Widgets -->
-
-
-    <!-- Stats Cards -->
-    <div class="glass-panel stat-card">
-        <div class="stat-title">System CPU</div>
-        <div class="stat-value">{{ cpu }}%</div>
+<div class="bento-grid">
+    <!-- Row 1: Welcome & Quick Actions (Span 4) -->
+    <div class="glass-panel col-span-4 animate-enter"
+        style="padding: 2rem; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1>Dashboard</h1>
+            <p style="color: var(--text-muted); margin-top: 0.5rem;">Welcome back, <span
+                    style="color: var(--primary-color);">{{ userData.name }}</span></p>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+            <a href="{{ url_for('upload') }}" class="upload-btn"
+                style="padding: 0.8rem 1.5rem; background: var(--primary-color); color: white; border-radius: 8px; font-weight: 500;">
+                + New Upload
+            </a>
+        </div>
     </div>
 
-    <div class="glass-panel stat-card">
-        <div class="stat-title">System RAM</div>
-        <div class="stat-value">{{ ram }}%</div>
+    <!-- Row 2: Market Ticker (Span 4) -->
+    <div class="glass-panel col-span-4 animate-enter delay-100" style="padding: 1.5rem;">
+        <div
+            style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem; letter-spacing: 0.05em;">
+            Market Status</div>
+        <div id="stock-container" class="market-ticker">
+            <!-- Skeletons inline for ticker -->
+            <div class="skeleton" style="width: 120px; height: 50px;"></div>
+            <div class="skeleton" style="width: 120px; height: 50px;"></div>
+            <div class="skeleton" style="width: 120px; height: 50px;"></div>
+        </div>
     </div>
 
-    <div class="glass-panel stat-card">
-        <div class="stat-title">ML Prediction</div>
-        <div class="stat-value">{{ mlResult }}%</div>
-        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Based on {{ studyHours }} study
-            hours</div>
+    <!-- Row 3: Hero KPI (Span 2, Row 2) -->
+    <div class="glass-panel bento-tile col-span-2 row-span-2 animate-enter delay-200"
+        style="padding: 2rem; position: relative; overflow: hidden;">
+        <div style="z-index: 2; position: relative;">
+            <div class="stat-title">Current ML Prediction</div>
+            <div
+                style="font-size: 4rem; font-weight: 800; background: linear-gradient(to right, var(--primary-color), var(--secondary-color)); -webkit-background-clip: text; background-clip: text; color: transparent; margin: 1rem 0;">
+                {{ mlResult }}%
+            </div>
+            <p style="color: var(--text-muted);">Probability based on your <strong>{{ studyHours }}h</strong> study
+                session.</p>
+        </div>
+        <!-- Decorative bg blob -->
+        <div
+            style="position: absolute; top: -20%; right: -20%; width: 300px; height: 300px; background: var(--primary-color); opacity: 0.05; border-radius: 50%; filter: blur(50px);">
+        </div>
     </div>
 
-    <div class="glass-panel stat-card">
-        <div class="stat-title">Gallery Items</div>
-        <div class="stat-value">{{ galleryCount }}</div>
-        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Total Uploaded Images</div>
+    <!-- Row 3 Right: System Health Chips (Span 1 each) -->
+    <div class="glass-panel stat-chip col-span-1 animate-enter delay-200">
+        <div class="icon">🖥️</div>
+        <div class="info">
+            <div class="stat-value" style="font-size: 1.5rem;">{{ cpu }}%</div>
+            <div class="stat-title" style="margin: 0; font-size: 0.75rem;">CPU Usage</div>
+        </div>
     </div>
 
-    <div class="glass-panel stat-card">
-        <div class="stat-title">Total Students</div>
-        <div class="stat-value">{{ studentCount }}</div>
-        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Enrolled Students</div>
+    <div class="glass-panel stat-chip col-span-1 animate-enter delay-200">
+        <div class="icon">🧠</div>
+        <div class="info">
+            <div class="stat-value" style="font-size: 1.5rem;">{{ ram }}%</div>
+            <div class="stat-title" style="margin: 0; font-size: 0.75rem;">RAM Usage</div>
+        </div>
     </div>
 
-    <div class="glass-panel stat-card">
-        <div class="stat-title">Total Users</div>
-        <div class="stat-value">{{ userCount }}</div>
-        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">System Users</div>
+    <!-- Row 4 Right: Secondary Stats (Span 1 each) -->
+    <div class="glass-panel stat-chip col-span-1 animate-enter delay-300">
+        <div class="icon">🖼️</div>
+        <div class="info">
+            <div class="stat-value" style="font-size: 1.5rem;">{{ galleryCount }}</div>
+            <div class="stat-title" style="margin: 0; font-size: 0.75rem;">Images</div>
+        </div>
     </div>
 
-    <!-- Skills Card -->
-    <!-- <div class="glass-panel stat-card">
+    <div class="glass-panel stat-chip col-span-1 animate-enter delay-300" style="position: relative; overflow: hidden;">
+        <div class="icon" style="z-index: 2;">👥</div>
+        <div class="info" style="z-index: 2;">
+            <div class="stat-value" style="font-size: 1.5rem;">{{ userCount }}</div>
+            <div class="stat-title" style="margin: 0; font-size: 0.75rem;">Users</div>
+        </div>
+        <!-- Background Chart -->
+        <div id="user-chart"
+            style="position: absolute; bottom: 0; left: 0; width: 100%; height: 50px; opacity: 0.2; z-index: 1;"></div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Render simulated user growth chart
+            // safely quote Jinja variable so IDE doesn't think it's invalid JS syntax
+            const finalValue = Number("{{ userCount }}");
+
+            const options = {
+                series: [{
+                    data: [10, 15, 20, 25, 30, 40, finalValue]
+                }],
+                chart: {
+                    type: 'area',
+                    height: 50,
+                    sparkline: { enabled: true }
+                },
+                stroke: { curve: 'smooth', width: 2 },
+                fill: { opacity: 0.3 },
+                colors: ['#6366f1']
+            };
+            new ApexCharts(document.querySelector("#user-chart"), options).render();
+        });
+    </script>
+
+    <!-- Row 5? Or Activity Timeline col-span-4 if we want wide, or fit in? 
+         Let's put Activity Timeline as col-span-2 and maybe Students as col-span-2 
+         Actually plan said Timeline (1x2). Let's put Timeline in a new row spanning full or 2 cols. 
+         Let's do Col-Span-4 for timeline to fill bottom.
+    -->
+    <div class="glass-panel col-span-4 animate-enter delay-300" style="padding: 1.5rem;">
+        <div class="stat-title">Recent Activity</div>
+        <div class="timeline-list">
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <h4>Pass Prediction Generated</h4>
+                    <div class="timeline-time">Just now</div>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-dot" style="background: var(--secondary-color);"></div>
+                <div class="timeline-content">
+                    <h4>System Resource Check</h4>
+                    <div class="timeline-time">1 min ago</div>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-dot" style="background: var(--text-muted);"></div>
+                <div class="timeline-content">
+                    <h4>Gallery Sync</h4>
+                    <div class="timeline-time">Active</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Skills Card -->
+<!-- <div class="glass-panel stat-card">
         <div class="stat-title">Skills</div>
         <ul style="margin-top: 1rem; padding-left: 1.5rem;">
             {% for skill in user.skills %}
@@ -90,54 +190,85 @@
 
     function updateStocks() {
         const container = document.getElementById('stock-container');
-        // Add updating class to stock cards only, not the progress bar container
-        const cards = container.querySelectorAll('.stat-card');
-        cards.forEach(card => card.classList.add('updating'));
 
         fetch('/api/stocks')
             .then(response => response.json())
             .then(data => {
-                // Rebuild HTML but keep progress bar structure
-                let html = `
-                    <div class="progress-container">
-                        <div id="refresh-bar" class="progress-bar" style="width: 0%"></div>
-                    </div>
-                `;
+                let html = '';
 
-                data.forEach(stock => {
+                // Store charts data to render after HTML insertion
+                let chartData = [];
+
+                data.forEach((stock, index) => {
                     const arrow = stock.is_up ? '▲' : '▼';
                     const color = stock.is_up ? '#10b981' : '#ef4444';
+                    const chartId = `stock-chart-${index}`;
 
-                    const card = `
-                        <div class="glass-panel stat-card">
-                            <div class="stat-title">${stock.name}</div>
-                            <div class="stat-value" style="font-size: 1.5rem;">${stock.price}</div>
-                            <div style="font-size: 0.9rem; margin-top: 0.5rem; color: ${color};">
-                                ${arrow} ${stock.change} (${stock.pct})
-                            </div>
-                            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem; text-align: right;">
-                                ${stock.last_updated}
+                    // Ticker Item Structure
+                    const item = `
+                        <div class="ticker-item animate-enter" style="min-width: 160px;">
+                            <div style="font-weight: 600; color: var(--text-color); margin-bottom: 2px;">${stock.name}</div>
+                             <div style="display: flex; align-items: flex-end; justify-content: space-between;">
+                                <div>
+                                    <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-color);">${stock.price}</div>
+                                    <div style="font-size: 0.75rem; color: ${color};">
+                                        ${arrow} ${stock.change} (${stock.pct})
+                                    </div>
+                                </div>
+                                <!-- Sparkline Container -->
+                                <div id="${chartId}" style="width: 60px; height: 35px;"></div>
                             </div>
                         </div>
                     `;
-                    html += card;
+                    html += item;
+
+                    chartData.push({
+                        id: chartId,
+                        data: stock.history,
+                        color: color
+                    });
                 });
 
                 container.innerHTML = html;
 
-                // Restart progress animation
+                // Render Charts
+                chartData.forEach(cd => {
+                    const options = {
+                        series: [{ data: cd.data }],
+                        chart: {
+                            type: 'line',
+                            width: 60,
+                            height: 35,
+                            sparkline: { enabled: true }
+                        },
+                        stroke: {
+                            curve: 'smooth',
+                            width: 2,
+                            colors: [cd.color]
+                        },
+                        tooltip: {
+                            fixed: { enabled: false },
+                            x: { show: false },
+                            y: { title: { formatter: function (seriesName) { return '' } } },
+                            marker: { show: false }
+                        }
+                    };
+                    new ApexCharts(document.querySelector(`#${cd.id}`), options).render();
+                });
+
                 startProgress();
             })
             .catch(error => {
                 console.error('Error fetching stock data:', error);
-                cards.forEach(card => card.classList.remove('updating'));
-                // Retry progress
                 startProgress();
             });
     }
 
     // Initial start
     startProgress();
+    // Fetch stocks immediately
+    updateStocks();
+
     // Refresh loop using setInterval matching the progress timing
     setInterval(updateStocks, REFRESH_TIME);
 </script>

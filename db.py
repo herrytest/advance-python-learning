@@ -12,6 +12,8 @@ django.setup()
 
 from models import Gallery, Category, User, Role, Student
 from django.core.paginator import Paginator, EmptyPage
+from django.utils import timezone
+from django.db import IntegrityError
 
 # ... (existing imports)
 
