@@ -19,8 +19,8 @@ model.fit(X, y)
 
 # Step 4: Predict new value
 hours = 3.5
-prediction = model.predict([[hours]])
+prediction = model.predict(pd.DataFrame([[hours]], columns=["hours"]))
 
 def predict_result(hours):
-    prediction = model.predict([[hours]])
+    prediction = model.predict(pd.DataFrame([[hours]], columns=["hours"]))
     return "Pass ✅" if prediction[0] == 1 else "Fail ❌"

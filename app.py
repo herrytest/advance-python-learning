@@ -2,6 +2,10 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 import psutil
 from ml import predict_result
 import os
+
+# Suppress TensorFlow warning
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
 import easyocr
 import cv2
 import yfinance as yf
