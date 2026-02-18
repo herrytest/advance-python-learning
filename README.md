@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="static/images/advanced_python_ai_web_suite_preview_small.jpg" alt="Advanced Python AI Web Suite" width="100%">
+  <img src="static/images/advanced_python_ai_web_suite_preview_small.jpg" alt="Advanced Python AI Web Suite" width="60%" height="auto">
 </p>
 
 <h1 align="center">Advanced Python AI Web Suite</h1>
