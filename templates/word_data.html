@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Word Data - Learning App{% endblock %}
+
+{% block content %}
+<div class="glass-panel" style="padding: 2rem;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>WORD DOCUMENTS</h2>
+        <button class="btn btn-primary" onclick="document.getElementById('word-upload').click()">
+            <span>📤</span> Upload Word File
+        </button>
+        <input type="file" id="word-upload" hidden accept=".docx" onchange="uploadWord(this)">
+    </div>
+
+    <!-- Upload Loader -->
+    <div id="uploadLoader" class="loader-overlay">
+        <div class="spinner"></div>
+        <div class="loader-text">Extracting Word Content...</div>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Filename</th>
+                    <th>Text Snippet</th>
+                    <th>Created At</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in word_data %}
+                <tr>
+                    <td>{{ item.id }}</td>
+                    <td><strong>{{ item.filename }}</strong></td>
+                    <td>{{ item.text_content[:50] }}...</td>
+                    <td>{{ item.created_at }}</td>
+                    <td>
+                        <a href="{{ url_for('word_detail', item_id=item.id) }}" class="btn btn-sm btn-outline">
+                            View Details
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 3rem;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">📂</div>
+                        <p>No Word documents uploaded yet.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function uploadWord(input) {
+        if (input.files && input.files[0]) {
+            const formData = new FormData();
+            formData.append('word_file', input.files[0]);
+
+            document.getElementById('uploadLoader').classList.add('active');
+
+            fetch('{{ url_for("upload_word") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        alert('Upload failed: ' + (data.error || 'Unknown error'));
+                        document.getElementById('uploadLoader').classList.remove('active');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred during upload.');
+                    document.getElementById('uploadLoader').classList.remove('active');
+                });
+        }
+    }
+</script>
+{% endblock %}

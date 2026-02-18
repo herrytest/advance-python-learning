@@ -1,0 +1,449 @@
+{% extends "base.html" %}
+
+{% block title %}Word Detail - {{ item.filename }}{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --glass-hover: rgba(255, 255, 255, 0.06);
+    }
+
+    .extraction-container {
+        animation: fadeIn 0.8s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .accordion-item {
+        margin-bottom: 2rem;
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        overflow: hidden;
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .accordion-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .accordion-header {
+        padding: 1.5rem 2rem;
+        background: rgba(255, 255, 255, 0.02);
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid transparent;
+        transition: all 0.3s ease;
+    }
+
+    .accordion-item.active .accordion-header {
+        background: rgba(255, 255, 255, 0.05);
+        border-bottom-color: var(--glass-border);
+    }
+
+    .accordion-content {
+        display: none;
+        padding: 2rem;
+    }
+
+    .accordion-item.active .accordion-content {
+        display: block;
+    }
+
+    .chevron {
+        width: 24px;
+        height: 24px;
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        opacity: 0.6;
+    }
+
+    .accordion-item.active .chevron {
+        transform: rotate(180deg);
+        opacity: 1;
+    }
+
+    .round-card {
+        margin-bottom: 1.5rem;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 15px;
+        border: 1px solid var(--glass-border);
+        transition: all 0.3s ease;
+    }
+
+    .round-card:hover {
+        background: var(--glass-hover);
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .round-header {
+        padding: 1.25rem 1.5rem;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    .round-content {
+        display: none;
+        padding: 0 1.5rem 1.5rem 1.5rem;
+    }
+
+    .round-card.active .round-content {
+        display: block;
+    }
+
+    .extraction-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 8px;
+    }
+
+    .extraction-table td {
+        padding: 1.25rem;
+        background: rgba(255, 255, 255, 0.02);
+        vertical-align: middle;
+        transition: background 0.2s ease;
+    }
+
+    .extraction-table tr:hover td {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .extraction-table td:first-child {
+        border-radius: 12px 0 0 12px;
+    }
+
+    .extraction-table td:last-child {
+        border-radius: 0 12px 12px 0;
+    }
+
+    .image-wrapper {
+        position: relative;
+        width: 80px;
+        height: 80px;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        transition: transform 0.3s ease;
+    }
+
+    .image-wrapper:hover {
+        transform: scale(1.1);
+    }
+
+    .image-preview {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        cursor: pointer;
+    }
+
+    .category-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        backdrop-filter: blur(4px);
+    }
+
+    .category-badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+    }
+
+    .badge-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 10px currentColor;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% {
+            opacity: 0.6;
+            transform: scale(0.9);
+        }
+
+        50% {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        100% {
+            opacity: 0.6;
+            transform: scale(0.9);
+        }
+    }
+
+    .round-number-pill {
+        background: var(--primary-color);
+        color: white;
+        padding: 0.2rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        margin-right: 0.5rem;
+    }
+
+    .play-btn {
+        /* background: rgba(255, 255, 255, 0.05); */
+        border: 1px solid var(--glass-border);
+        color: #fff;
+        padding: 0.5rem 1rem;
+        border-radius: 30px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(5px);
+    }
+
+    .play-btn:hover {
+        /* background: rgba(var(--primary-rgb), 0.2); */
+        border-color: var(--primary-color);
+        transform: translateY(-2px);
+    }
+
+    .play-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+</style>
+
+<div class="extraction-container glass-panel" style="padding: 3rem;">
+    <div class="mb-5 d-flex justify-content-between align-items-end">
+        <div>
+            <a href="{{ url_for('word_data_list') }}" class="btn btn-sm mb-3"
+                style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);">&larr; Back to
+                Files</a>
+            <h1
+                style="margin: 0; font-size: 2.5rem; font-weight: 800; background: linear-gradient(135deg, #fff 0%, #aaa 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                {{ item.filename }}
+            </h1>
+            <p style="color: var(--text-muted); margin-top: 0.75rem; font-size: 1.1rem;">
+                <span class="icon" style="margin-right: 0.5rem;">📅</span> Processed on {{ item.created_at }}
+            </p>
+        </div>
+        <div style="text-align: right;">
+            <div style="font-size: 2rem; font-weight: 900; color: var(--primary-color);">{{ item.images|length }}</div>
+            <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted);">
+                Total Images</div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <h3 style="margin-bottom: 2rem; display: flex; align-items: center; gap: 1rem;">
+                <span style="width: 40px; height: 2px; background: var(--primary-color);"></span>
+                Extraction Analysis
+            </h3>
+
+            {% if item.images %}
+            {# Grouping logic in Jinja #}
+            {% set images_by_cat = {} %}
+            {% for img in item.images %}
+            {% if img.category not in images_by_cat %}
+            {% set _ = images_by_cat.update({img.category: {}}) %}
+            {% endif %}
+            {% if img.round_number not in images_by_cat[img.category] %}
+            {% set _ = images_by_cat[img.category].update({img.round_number: []}) %}
+            {% endif %}
+            {% set _ = images_by_cat[img.category][img.round_number].append(img) %}
+            {% endfor %}
+
+            {% for cat, rounds in images_by_cat.items() %}
+            <div class="accordion-item active">
+                <div class="accordion-header" onclick="this.parentElement.classList.toggle('active')">
+                    <div style="display: flex; align-items: center; gap: 1.5rem;">
+                        {% if cat == 'תרגול' %}
+                        {% set bg_color, text_color = 'rgba(16, 185, 129, 0.15)', '#10b981' %}
+                        {% elif cat == 'שליחה לקלינאית' %}
+                        {% set bg_color, text_color = 'rgba(139, 92, 246, 0.15)', '#8b5cf6' %}
+                        {% elif cat == 'כללי' %}
+                        {% set bg_color, text_color = 'rgba(59, 130, 246, 0.15)', '#3b82f6' %}
+                        {% elif cat == 'בוצע' %}
+                        {% set bg_color, text_color = 'rgba(20, 184, 166, 0.15)', '#14b8a6' %}
+                        {% else %}
+                        {% set bg_color, text_color = 'rgba(245, 158, 11, 0.15)', '#f59e0b' %}
+                        {% endif %}
+                        <div class="category-badge"
+                            style="background: {{ bg_color }}; color: {{ text_color }}; border-color: {{ text_color }}33;">
+                            <span class="badge-dot"></span>
+                            {{ cat }}
+                        </div>
+                        <span style="font-size: 0.9rem; color: var(--text-muted);">{{ rounds|length }} Rounds
+                            found</span>
+                    </div>
+                    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </div>
+                <div class="accordion-content">
+                    {% for round_num, imgs in rounds.items()|sort %}
+                    <div class="round-card active">
+                        <div class="round-header" onclick="this.parentElement.classList.toggle('active')">
+                            <div style="display: flex; align-items: center;">
+                                <span class="round-number-pill">R{{ round_num }}</span>
+                                <span>Round Sequence {{ round_num }}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <small style="color: var(--text-muted); font-weight: 500;">{{ imgs|length }}
+                                    Images</small>
+                                <svg class="chevron" style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="round-content">
+                            <table class="extraction-table">
+                                <thead>
+                                    <tr style="background: none;">
+                                        <th
+                                            style="padding: 0.5rem 1.25rem; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">
+                                            Asset</th>
+                                        <th
+                                            style="padding: 0.5rem 1.25rem; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">
+                                            Extracted Identity</th>
+                                        <th
+                                            style="padding: 0.5rem 1.25rem; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; text-align: right;">
+                                            System Path</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for img in imgs %}
+                                    <tr>
+                                        <td style="width: 120px;">
+                                            <div class="image-wrapper">
+                                                <img src="{{ url_for('static', filename='word_images/' + img.image_path) }}"
+                                                    class="image-preview" alt="Preview" onclick="window.open(this.src)">
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div
+                                                style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                                <div>
+                                                    <div
+                                                        style="font-weight: 700; font-size: 1.2rem; color: #fff; margin-bottom: 4px;">
+                                                        {{ img.label }}</div>
+                                                    <div
+                                                        style="font-size: 0.8rem; color: var(--primary-color); opacity: 0.8; font-weight: 500;">
+                                                        Normalized Tag</div>
+                                                </div>
+                                                {% if img.audio_path %}
+                                                <div class="audio-control">
+                                                    <audio id="audio-{{ img.id }}"
+                                                        src="{{ url_for('static', filename='word_images/' + img.audio_path) }}"></audio>
+                                                    <button class="play-btn" onclick="toggleAudio('{{ img.id }}')">
+                                                        <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor">
+                                                            <path d="M8 5v14l11-7z" />
+                                                        </svg>
+                                                        <svg class="pause-icon" style="display: none;"
+                                                            viewBox="0 0 24 24" fill="currentColor">
+                                                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                                                        </svg>
+                                                        Recording
+                                                    </button>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td style="text-align: right;">
+                                            <code
+                                                style="font-size: 0.75rem; color: var(--text-muted); background: rgba(0,0,0,0.2); padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid var(--glass-border);">
+                                                    {{ img.image_path.split('/')[-1] }}
+                                                </code>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="glass-panel"
+                style="text-align: center; padding: 6rem; background: rgba(255,255,255,0.01); border: 2px dashed var(--glass-border); border-radius: 30px;">
+                <div style="font-size: 4rem; opacity: 0.2; margin-bottom: 2rem;">🔍</div>
+                <h3 style="color: var(--text-muted);">No datasets available for analysis</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Upload a document containing valid categories
+                    and image structures.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleAudio(id) {
+        const audio = document.getElementById('audio-' + id);
+        const btn = audio.parentElement.querySelector('.play-btn');
+        const playIcon = btn.querySelector('.play-icon');
+        const pauseIcon = btn.querySelector('.pause-icon');
+
+        if (audio.paused) {
+            // Stop all other playing audios
+            document.querySelectorAll('audio').forEach(a => {
+                a.pause();
+                const b = a.parentElement.querySelector('.play-btn');
+                if (b) {
+                    b.querySelector('.play-icon').style.display = 'block';
+                    b.querySelector('.pause-icon').style.display = 'none';
+                    b.classList.remove('playing');
+                }
+            });
+
+            audio.play();
+            playIcon.style.display = 'none';
+            pauseIcon.style.display = 'block';
+            btn.classList.add('playing');
+        } else {
+            audio.pause();
+            playIcon.style.display = 'block';
+            pauseIcon.style.display = 'none';
+            btn.classList.remove('playing');
+        }
+
+        audio.onended = () => {
+            playIcon.style.display = 'block';
+            pauseIcon.style.display = 'none';
+            btn.classList.remove('playing');
+        };
+    }
+</script>
+{% endblock %}

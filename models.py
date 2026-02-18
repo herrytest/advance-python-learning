@@ -104,3 +104,43 @@ class Student(models.Model):
     def __str__(self):
         return self.name
 
+
+class WordData(models.Model):
+    """Model to store extracted Word document text"""
+    id = models.AutoField(primary_key=True)
+    filename = models.CharField(max_length=255)
+    text_content = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        app_label = 'myapp'
+        db_table = 'word_data'
+        managed = False
+        ordering = ['-id']
+
+    def __str__(self):
+        return f"WordData #{self.id} - {self.filename}"
+
+
+class WordImage(models.Model):
+    """Model to store paths to extracted images from Word documents"""
+    id = models.AutoField(primary_key=True)
+    word_data = models.ForeignKey(
+        WordData,
+        on_delete=models.CASCADE,
+        db_column='word_data_id',
+        related_name='images'
+    )
+    image_path = models.CharField(max_length=255)
+    label = models.CharField(max_length=255, null=True, blank=True)
+    category = models.CharField(max_length=100, null=True, blank=True)
+    round_number = models.IntegerField(default=0)
+    audio_path = models.CharField(max_length=255, null=True, blank=True)
+
+    class Meta:
+        app_label = 'myapp'
+        db_table = 'word_images'
+        managed = False
+
+    def __str__(self):
+        return f"WordImage #{self.id} - {self.image_path}"

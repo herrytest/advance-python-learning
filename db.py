@@ -11,7 +11,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_settings')
 django.setup()
 
 from datetime import datetime
-from models import Gallery, Category, User, Role, Student
+from models import Gallery, Category, User, Role, Student, WordData, WordImage
 from django.core.paginator import Paginator, EmptyPage
 from django.utils import timezone
 from django.db import IntegrityError
@@ -402,3 +402,62 @@ def get_student_count():
 def get_user_count():
     """Get total count of users using Django ORM"""
     return User.objects.count()
+
+# ===== WORD DATA FUNCTIONS =====
+
+def save_word_data(filename, text_content):
+    """Save extracted Word document data using Django ORM"""
+    word_data = WordData.objects.create(
+        filename=filename,
+        text_content=text_content
+    )
+    return word_data.id
+
+
+def save_word_image(word_data_id, image_path, label=None, category=None, round_number=0, audio_path=None):
+    """Save path to an extracted image with label, category, round and audio using Django ORM"""
+    word_image = WordImage.objects.create(
+        word_data_id=word_data_id,
+        image_path=image_path,
+        label=label,
+        category=category,
+        round_number=round_number,
+        audio_path=audio_path
+    )
+    return word_image.id
+
+
+def get_all_word_data():
+    """Get all processed Word document entries using Django ORM"""
+    items = WordData.objects.all().prefetch_related('images').values(
+        'id', 'filename', 'text_content', 'created_at'
+    )
+    # Convert QuerySet to list of dicts
+    data = []
+    for item in items:
+        if item['created_at']:
+            item['created_at'] = item['created_at'].strftime("%Y-%m-%d %H:%M:%S")
+        data.append(item)
+    return data
+
+
+def get_word_data_by_id(item_id):
+    """Get a specific Word document entry by ID including its images"""
+    try:
+        item = WordData.objects.prefetch_related('images').get(id=item_id)
+        images = list(item.images.all().order_by('id').values('id', 'image_path', 'label', 'category', 'round_number', 'audio_path'))
+        
+        return {
+            'id': item.id,
+            'filename': item.filename,
+            'text_content': item.text_content,
+            'created_at': item.created_at.strftime("%Y-%m-%d %H:%M:%S") if item.created_at else None,
+            'images': images
+        }
+    except WordData.DoesNotExist:
+        return None
+
+
+def get_word_data_count():
+    """Get total count of processed Word documents"""
+    return WordData.objects.count()

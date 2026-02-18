@@ -16,14 +16,17 @@ from datetime import datetime
 from functools import wraps
 from db import (init_db, save_gallery_item, get_gallery_items, get_gallery_count, 
                 delete_gallery_item, create_user, get_all_users, get_user_by_id, 
-                update_user, delete_user, get_categories, get_student_count, get_user_count)
+                update_user, delete_user, get_categories, get_student_count, get_user_count,
+                save_word_data, save_word_image, get_all_word_data, get_word_data_by_id)
 
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # required for session
 
 UPLOAD_FOLDER = "uploads"
+WORD_IMAGES_FOLDER = os.path.join("static", "word_images")
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["WORD_IMAGES_FOLDER"] = WORD_IMAGES_FOLDER
 
 # reader = easyocr.Reader(['en']) # Lazy load this
 reader = None
@@ -37,6 +40,9 @@ def get_reader():
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+
+if not os.path.exists(WORD_IMAGES_FOLDER):
+    os.makedirs(WORD_IMAGES_FOLDER)
 
 # Static credentials
 USERNAME = "admin"
@@ -67,6 +73,8 @@ def robots():
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
+    if 'user' in session:
+        return redirect(url_for('dashboard'))
     message = ""
 
     if request.method == 'POST':
@@ -299,7 +307,8 @@ def dashboard():
 
     
     
-    # stocks = fetch_stock_data() # Optimizing load time: Removed server-side fetch
+    from db import get_word_data_count
+    word_count = get_word_data_count()
 
     return render_template(
         "dashboard.html",
@@ -311,7 +320,8 @@ def dashboard():
         userData=user,
         galleryCount=gallery_count,
         studentCount=student_count,
-        userCount=user_count
+        userCount=user_count,
+        wordCount=word_count
     )
 
 # EasyOCR is used instead of pytesseract
@@ -568,6 +578,187 @@ def gallery():
 def logout():
     session.pop('user', None)
     return redirect(url_for('login'))
+
+
+# ===== WORD EXTRACTION LOGIC =====
+
+def extract_word_content(file_path, filename):
+    """Extract and organize images from a Word document (.docx) with per-category rounds"""
+    from docx import Document
+    import os
+    import uuid
+    import re
+    from docx.oxml.ns import qn
+    
+    doc = Document(file_path)
+    
+    # Store minimal entry
+    word_id = save_word_data(filename, "")
+    
+    # Category and Round management
+    categories = ["תרגול", "שליחה לקלינאית"]
+    current_category = "תרגול" # Default
+    round_counters = {cat: -1 for cat in categories} # Initialize all at -1
+    
+    # Helper to sanitize folder/file names
+    def sanitize(name):
+        return re.sub(r'[\\/*?:"<>|]', "", name).strip().replace(" ", "_")
+
+    # Map to track filenames within the same folder to prevent overwrites
+    used_filenames = {} # (full_dir) -> [filenames]
+
+    rel_map = {rel.rId: rel.target_part for rel in doc.part.rels.values() if "image" in rel.target_ref}
+    last_text = ""
+
+    for para in doc.paragraphs:
+        para_text = para.text.strip()
+        
+        # Check for category/round markers
+        found_marker = False
+        for cat in categories:
+            if cat in para_text:
+                current_category = cat
+                # Increment on EACH occurrence found to create a new round
+                round_counters[cat] += 1
+                found_marker = True
+                break
+        
+        # If no marker, it might be a label for an image
+        # Iterate through runs
+        for run in para.runs:
+            run_text = run.text.strip()
+            if run_text and not any(cat in run_text for cat in categories):
+                last_text = run_text
+            
+            # Find images
+            blip_ids = []
+            for el in run.element.iter():
+                if el.tag.endswith('blip'):
+                    embed_id = el.get(qn('r:embed'))
+                    if embed_id:
+                        blip_ids.append(embed_id)
+            
+            for blip_id in blip_ids:
+                if blip_id in rel_map:
+                    # If we haven't seen a round marker yet for the default category, start it at 0
+                    if round_counters[current_category] == -1:
+                        round_counters[current_category] = 0
+
+                    target_part = rel_map[blip_id]
+                    img_data = target_part.blob
+                    img_ext = target_part.partname.split('.')[-1]
+                    
+                    cat_folder = sanitize(current_category)
+                    round_folder = f"round_{round_counters[current_category]}"
+                    label_name = sanitize(last_text) if last_text else "image"
+                    
+                    relative_dir = os.path.join(cat_folder, round_folder)
+                    full_dir = os.path.join(app.config["WORD_IMAGES_FOLDER"], relative_dir)
+                    os.makedirs(full_dir, exist_ok=True)
+                    
+                    # Duplicate handling: label.ext, label_1.ext, etc.
+                    if full_dir not in used_filenames:
+                        used_filenames[full_dir] = []
+                    
+                    base_filename = f"{label_name}.{img_ext}"
+                    final_filename = base_filename
+                    counter = 1
+                    while final_filename in used_filenames[full_dir]:
+                        final_filename = f"{label_name}_{counter}.{img_ext}"
+                        counter += 1
+                    
+                    used_filenames[full_dir].append(final_filename)
+                    
+                    img_save_path = os.path.join(full_dir, final_filename)
+                    db_image_path = os.path.join(relative_dir, final_filename)
+                    
+                    import shutil
+                    
+                    # Audio mapping logic
+                    audio_source_dir = os.path.join(app.config["WORD_IMAGES_FOLDER"], "images_audio")
+                    audio_filename = None
+                    db_audio_path = None
+                    
+                    if last_text:
+                        # Check for .ogg, .mp3, or .wav
+                        # Check BOTH raw label (with spaces) and sanitized label
+                        potential_names = [last_text, label_name]
+                        for name in potential_names:
+                            if not name: continue
+                            for ext in ["ogg", "mp3", "wav"]:
+                                potential_audio = f"{name}.{ext}"
+                                source_audio_path = os.path.join(audio_source_dir, potential_audio)
+                                
+                                if os.path.exists(source_audio_path):
+                                    # Use exact same name as image file (different extension)
+                                    image_basename = os.path.splitext(final_filename)[0]
+                                    audio_target_name = f"{image_basename}.{ext}"
+                                    target_audio_path = os.path.join(full_dir, audio_target_name)
+                                    
+                                    try:
+                                        # Use copy2 to keep source for other images with same label
+                                        shutil.copy2(source_audio_path, target_audio_path)
+                                        db_audio_path = os.path.join(relative_dir, audio_target_name)
+                                        break # Found and copied
+                                    except Exception as e:
+                                        print(f"Error copying audio: {e}")
+                            if db_audio_path: break # Stop if found
+
+                    with open(img_save_path, "wb") as f:
+                        f.write(img_data)
+                    
+                    save_word_image(
+                        word_id, 
+                        db_image_path, 
+                        label=last_text if last_text else "Unnamed Image",
+                        category=current_category,
+                        round_number=round_counters[current_category],
+                        audio_path=db_audio_path
+                    )
+            
+    return word_id
+
+
+@app.route('/upload_word', methods=['GET', 'POST'])
+@login_required
+def upload_word():
+    if request.method == 'POST':
+        if 'word_file' not in request.files:
+            return jsonify({"success": False, "error": "No file part"}), 400
+        
+        file = request.files['word_file']
+        if file.filename == '':
+            return jsonify({"success": False, "error": "No selected file"}), 400
+        
+        if file and file.filename.endswith('.docx'):
+            file_path = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
+            file.save(file_path)
+            
+            try:
+                word_id = extract_word_content(file_path, file.filename)
+                return jsonify({"success": True, "word_id": word_id})
+            except Exception as e:
+                return jsonify({"success": False, "error": str(e)}), 500
+        else:
+            return jsonify({"success": False, "error": "Invalid file type. Only .docx allowed."}), 400
+
+    return render_template('upload.html') # Reusing upload.html or creating specific one
+
+
+@app.route('/word_data')
+@login_required
+def word_data_list():
+    data = get_all_word_data()
+    return render_template('word_data.html', word_data=data)
+
+
+@app.route('/word_data/<int:item_id>')
+@login_required
+def word_detail(item_id):
+    item = get_word_data_by_id(item_id)
+    if not item:
+        return "Word document not found", 404
+    return render_template('word_detail.html', item=item)
 
 
 if __name__ == '__main__':
