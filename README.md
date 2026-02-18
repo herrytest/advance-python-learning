@@ -1,3 +1,40 @@
+<p align="center">
+  <img src="static/images/advanced_python_ai_web_suite_preview_small.jpg" alt="Advanced Python AI Web Suite" width="100%">
+</p>
+
+<h1 align="center">Advanced Python AI Web Suite</h1>
+
+<p align="center">
+Full-stack AI web application combining Flask, FastAPI, DeepFace, OCR, and real-time NSE stock analytics.
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#architecture">Architecture</a> •
+  <a href="#demo">Demo</a> •
+  <a href="#installation">Installation</a>
+</p>
+
+<p align="center">
+
+![Stars](https://img.shields.io/github/stars/kukadiyahiren/advance-python-learning?style=social)
+![Forks](https://img.shields.io/github/forks/kukadiyahiren/advance-python-learning?style=social)
+![Views](https://komarev.com/ghpvc/?kukadiyahiren=kukadiyahiren&repo=advance-python-learning&color=blue)
+![Downloads](https://img.shields.io/github/downloads/kukadiyahiren/advance-python-learning/total)
+![Python](https://img.shields.io/badge/Python-3.10+-blue)
+![Flask](https://img.shields.io/badge/Flask-Web_App-black)
+![FastAPI](https://img.shields.io/badge/FastAPI-REST_API-009688)
+![DeepFace](https://img.shields.io/badge/AI-DeepFace-purple)
+![OCR](https://img.shields.io/badge/OCR-Image_Text-orange)
+![NSE](https://img.shields.io/badge/Stocks-NSE_Data-green)
+![License](https://img.shields.io/badge/License-MIT-lightgrey)
+
+</p>
+
+<p align="center">
+Full-stack AI web application combining Flask, FastAPI, DeepFace, OCR, and NSE stock analytics.
+</p>
+
 # Advanced Python Learning Project
 
 A comprehensive Flask web application with FastAPI integration, featuring user management, image gallery, stock market dashboard, and AI-powered image processing.
