@@ -119,7 +119,15 @@ DB_CONFIG = {
 }
 ```
 
-### 7. Create Uploads Directory
+### 7. Initialize Database
+
+Before starting the application, run the migration script to create all necessary tables and seed initial data:
+
+```bash
+python3 apply_migration.py
+```
+
+### 8. Create Uploads Directory
 
 ```bash
 mkdir -p uploads
@@ -190,7 +198,11 @@ API Documentation: **http://localhost:8000/docs**
 myproject/
 ├── app.py                  # Main Flask application
 ├── fastapi_users.py        # FastAPI user management service
-├── db.py                   # Database functions
+├── db.py                   # Database functions (Django ORM)
+├── models.py               # Django model definitions
+├── django_settings.py      # Minimal Django configuration
+├── init_db.sql             # Database migration script (SQL)
+├── apply_migration.py      # Migration runner (Python)
 ├── ml.py                   # Machine learning utilities
 ├── templates/              # HTML templates
 │   ├── base.html
